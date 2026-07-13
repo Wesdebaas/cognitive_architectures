@@ -50,8 +50,22 @@ class GoalManagerNode(Node):
             - Otherwise, continue pursuing the current goal.
         """
 
-        # TODO
-        pass
+        if self.current_goal_index >= len(GOALS):
+            return
+
+        goal = GOALS[self.current_goal_index]
+        belief = beliefs.get(goal, 0.0)
+        achieved = belief >= GOAL_THRESHOLD
+
+        self.get_logger().info(
+            f"Achieved: {'yes' if achieved else 'no'} "
+            f"({belief:.2f} / {GOAL_THRESHOLD})"
+        )
+
+        if achieved:
+            self.next_goal()
+
+        self.print_goal()
 
     def next_goal(self):
         """
@@ -61,8 +75,9 @@ class GoalManagerNode(Node):
         report that the mission has finished.
         """
 
-        # TODO
-        pass
+        self.current_goal_index += 1
+
+        self.print_goal()
 
     def print_goal(self):
         """
@@ -72,8 +87,11 @@ class GoalManagerNode(Node):
         has been completed.
         """
 
-        # TODO
-        pass
+        if self.current_goal_index < len(GOALS):
+            current_goal = GOALS[self.current_goal_index]
+            self.get_logger().info(f"Current goal: {current_goal}")
+        else:
+            self.get_logger().info("All goals completed. Mission finished.")
 
     def print_beliefs(self, beliefs):
 
