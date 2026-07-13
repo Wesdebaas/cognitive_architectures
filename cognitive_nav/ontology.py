@@ -62,17 +62,27 @@ def load_ontology():
         # to infer the room type from the observed objects.
 
         # Example:
-        # LivingRoom.equivalent_to.append(
-        #     Room
-        #     & contains.some(Sofa)
-        # )
+        LivingRoom.equivalent_to.append(
+            Room
+            & contains.some(Sofa)
+            & contains.some(TV)
+        )
 
-        # Example rule:
+        Bedroom.equivalent_to.append(
+            Room
+            & contains.some(Bed)
+        )
 
-        # Bedroom.equivalent_to.append(
-        #     Room
-        #     & contains.some(Bed)
-        # )
+        Kitchen.equivalent_to.append(
+            Room
+            & contains.some(Fridge)
+            & contains.some(Oven)
+        )
+
+        DiningRoom.equivalent_to.append(
+            Room
+            & contains.some(DiningTable)
+        )
 
         # Try to make your rules specific enough to avoid
         # confusing one room with another.
