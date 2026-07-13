@@ -58,6 +58,7 @@ class SymbolicNode(Node):
         """
 
         # Forget previous observations
+        self.room.is_a = [self.Room]
         self.room.contains.clear()
 
         any_valid = False

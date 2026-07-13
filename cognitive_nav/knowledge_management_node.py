@@ -61,8 +61,7 @@ class KnowledgeManagementNode(Node):
             LivingRoom += 1
         """
 
-        # TODO
-        pass
+        self.room_beliefs[inferred_room] += 1.0
 
     def apply_decay(self):
         """
@@ -73,8 +72,8 @@ class KnowledgeManagementNode(Node):
             belief *= DECAY
         """
 
-        # TODO
-        pass
+        for room in self.room_beliefs:
+            self.room_beliefs[room] *= DECAY
 
     def publish_beliefs(self):
         """
@@ -84,8 +83,8 @@ class KnowledgeManagementNode(Node):
             Use json.dumps().
         """
 
-        # TODO
-        pass
+        belief_json = json.dumps(self.room_beliefs)
+        self.publisher.publish(String(data=belief_json))
 
 
     def print_beliefs(self):
