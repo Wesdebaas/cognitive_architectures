@@ -1,0 +1,35 @@
+{#-
+  Insertion template: one yolo_msgs/DetectionArray  ->  one SPARQL INSERT.
+
+  Each recognised object within `max_distance` metres is recorded as being
+  contained in the robot's current room (cn:current_room). Two triples per
+  object: its specific type, and the containment link.
+-#}
+{%- set label_map = {
+      "sofa":         "Sofa",
+      "bed":          "Bed",
+      "chair":        "Chair",
+      "dining table": "DiningTable",
+      "tv":           "TV",
+      "cup":          "Cup",
+      "refrigerator": "Fridge",
+      "oven":         "Oven"
+    } -%}
+{%- set max_distance = 3.0 -%}
+{%- set stamp = msg.header.stamp | rdf -%}
+{%- set objs = [] -%}
+{%- for d in msg.detections -%}
+  {%- set cls = label_map.get(d.class_name) -%}
+  {%- if cls and d.bbox3d.center.position.z <= max_distance -%}
+    {%- set _ = objs.append((cls, d.id)) -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- if objs -%}
+PREFIX cn: <http://cognitive-nav.org/ontology#>
+INSERT DATA {
+{% for cls, id in objs %}  cn:{{ cls|lower }}_{{ id }} a cn:{{ cls }} .
+  cn:{{ cls|lower }}_{{ id }} cn:observedAt {{ stamp }} .
+  cn:current_room cn:contains cn:{{ cls|lower }}_{{ id }} .
+{% endfor -%}
+}
+{%- endif -%}

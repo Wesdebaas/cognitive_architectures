@@ -9,4 +9,4 @@ clear_on_startup: true
 
 # Turtle files to load at startup.
 preload_files:
-  - example_data.ttl
+  - room_ontology.ttl

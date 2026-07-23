@@ -1,0 +1,74 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix cn:   <http://cognitive-nav.org/ontology#> .
+
+
+# Room-recognition ontology (TBox).
+
+# Core classes
+cn:Room           a owl:Class .
+cn:PhysicalObject a owl:Class .
+
+# 'contains' triple is inferred to be a Room, the object a PhysicalObject.
+# a Room can contain a PhysicalObject.
+cn:contains a owl:ObjectProperty ;
+    rdfs:domain cn:Room ;
+    rdfs:range  cn:PhysicalObject .
+
+# Object and room classes
+cn:Sofa        rdfs:subClassOf cn:PhysicalObject .
+cn:TV          rdfs:subClassOf cn:PhysicalObject .
+cn:Bed         rdfs:subClassOf cn:PhysicalObject .
+cn:Chair       rdfs:subClassOf cn:PhysicalObject .
+cn:DiningTable rdfs:subClassOf cn:PhysicalObject .
+cn:Fridge      rdfs:subClassOf cn:PhysicalObject .
+cn:Cup         rdfs:subClassOf cn:PhysicalObject .
+cn:Oven        rdfs:subClassOf cn:PhysicalObject .
+
+cn:LivingRoom rdfs:subClassOf cn:Room .
+cn:Bedroom    rdfs:subClassOf cn:Room .
+cn:Kitchen    rdfs:subClassOf cn:Room .
+cn:DiningRoom rdfs:subClassOf cn:Room .
+
+
+# Classification rules (the `equivalent_to` axioms).
+# A room is classified by which objects it contains.
+
+# LivingRoom == Room and contains some Sofa and contains some TV
+cn:LivingRoom owl:equivalentClass [
+    a owl:Class ;
+    owl:intersectionOf (
+        cn:Room
+        [ a owl:Restriction ; owl:onProperty cn:contains ; owl:someValuesFrom cn:Sofa ]
+        [ a owl:Restriction ; owl:onProperty cn:contains ; owl:someValuesFrom cn:TV ]
+    )
+] .
+
+# Bedroom == Room and contains some Bed
+cn:Bedroom owl:equivalentClass [
+    a owl:Class ;
+    owl:intersectionOf (
+        cn:Room
+        [ a owl:Restriction ; owl:onProperty cn:contains ; owl:someValuesFrom cn:Bed ]
+    )
+] .
+
+# Kitchen == Room and contains some Fridge and contains some Oven
+cn:Kitchen owl:equivalentClass [
+    a owl:Class ;
+    owl:intersectionOf (
+        cn:Room
+        [ a owl:Restriction ; owl:onProperty cn:contains ; owl:someValuesFrom cn:Fridge ]
+        [ a owl:Restriction ; owl:onProperty cn:contains ; owl:someValuesFrom cn:Oven ]
+    )
+] .
+
+# DiningRoom == Room and contains some DiningTable
+cn:DiningRoom owl:equivalentClass [
+    a owl:Class ;
+    owl:intersectionOf (
+        cn:Room
+        [ a owl:Restriction ; owl:onProperty cn:contains ; owl:someValuesFrom cn:DiningTable ]
+    )
+] .
