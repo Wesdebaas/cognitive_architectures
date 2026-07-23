@@ -1,0 +1,46 @@
+# Classify the robot's current room from the RECENT objects it contains.
+#
+# Runs with reasoning OFF: the room rules live here as SPARQL patterns
+# (not OWL axioms)
+#
+# ?cutoff is supplied by the caller as a substitution. Only objects observed
+# at or after ?cutoff count.
+
+PREFIX cn: <http://cognitive-nav.org/ontology#>
+
+SELECT DISTINCT ?room ?cutoff WHERE {
+
+  # LivingRoom: a recent Sofa AND a recent TV
+  {
+    cn:current_room cn:contains ?sofa , ?tv .
+    ?sofa a cn:Sofa ; cn:observedAt ?tsofa .
+    ?tv   a cn:TV   ; cn:observedAt ?ttv .
+    FILTER(?tsofa >= ?cutoff && ?ttv >= ?cutoff)
+    BIND(cn:LivingRoom AS ?room)
+  }
+  UNION
+  # Bedroom: a recent Bed
+  {
+    cn:current_room cn:contains ?bed .
+    ?bed a cn:Bed ; cn:observedAt ?tbed .
+    FILTER(?tbed >= ?cutoff)
+    BIND(cn:Bedroom AS ?room)
+  }
+  UNION
+  # Kitchen: a recent Fridge AND a recent Oven
+  {
+    cn:current_room cn:contains ?fridge , ?oven .
+    ?fridge a cn:Fridge ; cn:observedAt ?tfridge .
+    ?oven   a cn:Oven   ; cn:observedAt ?toven .
+    FILTER(?tfridge >= ?cutoff && ?toven >= ?cutoff)
+    BIND(cn:Kitchen AS ?room)
+  }
+  UNION
+  # DiningRoom: a recent DiningTable
+  {
+    cn:current_room cn:contains ?table .
+    ?table a cn:DiningTable ; cn:observedAt ?ttable .
+    FILTER(?ttable >= ?cutoff)
+    BIND(cn:DiningRoom AS ?room)
+  }
+}

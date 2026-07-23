@@ -1,10 +1,16 @@
 import json
+from datetime import datetime, timezone
 
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 
+from triplestar_msgs.srv import SelectQuery
+from triplestar_msgs.msg import QuerySubstitution
+
 DECAY = 0.8
+WINDOW_SECONDS = 5.0   # how far back an observation still counts as "recent"
+CYCLE_PERIOD = 1.0     # seconds between cognitive cycles
 
 
 class KnowledgeManagementNode(Node):
@@ -20,12 +26,10 @@ class KnowledgeManagementNode(Node):
             "DiningRoom": 0.0,
         }
 
-        # Subscribe to symbolic room inference
-        self.subscription = self.create_subscription(
-            String,
-            "/symbolic/room_inference",
-            self.callback,
-            10,
+        # Query the knowledge base for the current room
+        self.client = self.create_client(
+            SelectQuery,
+            "/triplestar/query/classify_room",
         )
 
         # Publish belief state
@@ -35,22 +39,66 @@ class KnowledgeManagementNode(Node):
             10,
         )
 
+        # Run one cognitive cycle every CYCLE_PERIOD seconds
+        self.timer = self.create_timer(CYCLE_PERIOD, self.cycle)
+
         self.get_logger().info("Knowledge Management Node initialized.")
 
-    def callback(self, msg: String):
+    def cycle(self):
         """
-        Called whenever the symbolic reasoner infers a room.
+        Run one cognitive cycle: ask the knowledge base which room we are in,
+        considering only observations from the last WINDOW_SECONDS.
         """
 
-        inferred_room = msg.data
+        if not self.client.service_is_ready():
+            return
+
+        now_seconds = self.get_clock().now().nanoseconds / 1e9
+        cutoff = datetime.fromtimestamp(now_seconds - WINDOW_SECONDS, tz=timezone.utc)
+
+        request = SelectQuery.Request()
+        request.substitutions = [
+            QuerySubstitution(
+                variable="cutoff",
+                rdf_term=f'"{cutoff.isoformat()}"^^<http://www.w3.org/2001/XMLSchema#dateTime>',
+            )
+        ]
+
+        future = self.client.call_async(request)
+        future.add_done_callback(self.callback)
+
+    def callback(self, future):
+        """
+        Called when the knowledge base answers with the inferred room(s).
+        """
+
+        response = future.result()
+
+        inferred_rooms = self.parse_rooms(response.result)
 
         self.apply_decay()
 
-        self.update_beliefs(inferred_room)
+        for inferred_room in inferred_rooms:
+            self.update_beliefs(inferred_room)
 
         self.publish_beliefs()
 
         self.print_beliefs()
+
+    def parse_rooms(self, result_json):
+        """
+        Extract the inferred room names from the JSON response.
+
+        Example:
+
+            'http://cognitive-nav.org/ontology#LivingRoom' -> 'LivingRoom'
+        """
+
+        data = json.loads(result_json)
+        return [
+            binding["room"]["value"].rsplit("#", 1)[-1]
+            for binding in data["results"]["bindings"]
+        ]
 
     def update_beliefs(self, inferred_room):
         """
