@@ -1,0 +1,13 @@
+# room_recognition — TriplestarKB Bringup Package
+
+Place SPARQL extension functions in ``functions/`` using the ``@kb_function`` decorator.
+
+```python
+from triplestar_core.functions import kb_function
+
+@kb_function("hello")
+def hello(name) -> str:
+    return f"Hello, {name.value}!"
+```
+
+Called in SPARQL as ``fn:hello("world")``.

@@ -1,0 +1,33 @@
+# This file records the exact third-party source repositories (and their
+# used version commits) that this thesis workspace was developed in.
+
+repositories:
+  triplestar_kb:
+    type: git
+    url: https://github.com/kas-lab/triplestar_kb.git
+    version: 2edd3d4b0af993bd27fac698df563e92a7653f54   # branch: main
+
+  yolo_ros:
+    type: git
+    url: https://github.com/mgonzs13/yolo_ros.git
+    version: 4b2796c8d11bd62457c715f5c8c79afcc6a865ea
+
+  mirte-ros-packages:
+    type: git
+    url: https://github.com/Juancams/mirte-ros-packages.git
+    version: 92b57be19cdb5a6896348374f07302bb180cb7e7   # branch: jazzy
+
+  mirte-gazebo:
+    type: git
+    url: https://github.com/Juancams/mirte-gazebo.git
+    version: 45d54b45e117e9c463e69f00520bf20a00492c30   # branch: harmonic
+
+  aws-robomaker-small-house-world:
+    type: git
+    url: https://github.com/Juancams/aws-robomaker-small-house-world.git
+    version: 37c0bf89ddcd5fc6cafbe011a86fdd93087c95d6   # branch: ros2-jazzy
+
+  aws-robomaker-small-warehouse-world:
+    type: git
+    url: https://github.com/Juancams/aws-robomaker-small-warehouse-world.git
+    version: a8ba1cea777799d51db58f759e4d2cfa2c81fd74   # branch: ros2-jazzy
