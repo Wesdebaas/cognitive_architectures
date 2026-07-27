@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'ground_truth_localization = goal_awareness_scenario.ground_truth_localization:main',
         ],
     },
 )
