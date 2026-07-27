@@ -38,14 +38,54 @@ colcon build
 source install/setup.bash
 ```
 
-Maybe add venv step here or at run?
+## Python virtual environment
 
+TriplestarKB and YOLO perception need Python packages that
+are **not** available from apt (`pydantic>=2`, `pyoxigraph`, `reasonable`,
+and the CPU build of `torch`/`ultralytics`). They live in a virtual environment, `venv_cogarchs`, created with `--system-site-packages` so the ROS packages remain importable.
+
+```bash
+source ~/ros2_ws/venv_cogarchs/bin/activate
+```
 
 ## Running
 
-Commands to run simulations 
+Each terminal first sources the workspace (`source ~/ros2_ws/install/setup.bash`, already in `~/.bashrc` here).
+
+**Terminal 1 — simulation + perception** (Gazebo, the robot, and the YOLO
+pipeline):
+
+```bash
+ros2 launch cognitive_nav mirte_house.launch.py
+```
+
+Control-C sometimes leaves a gazebo server running. Find/kill it with:
+
+```bash
+pgrep -af "gz sim" ; pkill -9 -f "gz sim"
+```
+
+**Terminal 2 — knowledge base** (TriplestarKB with the room-recognition config):
+
+Wait until YOLO is publishing before starting the KB, otherwise the KB's 2 s
+message-type autodetect times out and silently drops the detection subscriber.
 
 ```bash
 ros2 launch room_recognition room_recognition_triplestar.launch.xml
 ```
+
+
+**Terminal 3 — belief node** (polls the KB and maintains room beliefs):
+
+```bash
+ros2 run cognitive_nav knowledge_management_node --ros-args -p use_sim_time:=true
+```
+
+
+**Terminal 4 — teleop** (optional):
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+
 
