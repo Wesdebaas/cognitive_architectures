@@ -88,4 +88,9 @@ ros2 run cognitive_nav knowledge_management_node --ros-args -p use_sim_time:=tru
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
+############ Scenario 2
+
+```bash
+ros2 launch goal_awareness_scenario navigation.launch.py
+```
 
