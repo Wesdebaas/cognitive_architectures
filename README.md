@@ -97,6 +97,8 @@ Uses its own world and robot description to decrease computational load of simul
 
 Together these take the real-time factor from ~0.65 to >0.95. Physics was 60% of Gazebo's single-threaded loop.
 
+**Terminal 1 — simulation:**
+
 ```bash
 SCEN=$(ros2 pkg prefix goal_awareness_scenario)/share/goal_awareness_scenario
 ros2 launch cognitive_nav mirte_house.launch.py \
@@ -104,7 +106,18 @@ ros2 launch cognitive_nav mirte_house.launch.py \
   robot_xacro_path:=$SCEN/urdf/scenario_mirte_master.xacro
 ```
 
+**Terminal 2 — navigation:**
+
 ```bash
 ros2 launch goal_awareness_scenario navigation.launch.py
 ```
+
+**Terminal 3 — travel time measurement** (drives every ordered pair of stations, 3 samples each):
+
+```bash
+ros2 run goal_awareness_scenario travel_time_tour --ros-args -p use_sim_time:=true
+```
+
+`use_sim_time` is required, durations are read off the simulation clock. Every leg is appended to `goal_awareness_scenario/results/travel_times.csv` and saved to disk immediately, so if anything crashes you rerun the identical command and it resumes from what is already in the file. Options: `--repeats`, `--output`, `--waypoints`,
+`--max-legs`.
 
