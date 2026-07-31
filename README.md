@@ -90,6 +90,20 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
 ############ Scenario 2
 
+Uses its own world and robot description to decrease computational load of simulation, both in `goal_awareness_scenario`:
+
+- `worlds/scenario_house.world` — `max_step_size` 0.005 -> 0.01
+- `urdf/scenario_mirte_master.xacro` — depth camera 60 Hz -> 5 Hz
+
+Together these take the real-time factor from ~0.65 to >0.95. Physics was 60% of Gazebo's single-threaded loop.
+
+```bash
+SCEN=$(ros2 pkg prefix goal_awareness_scenario)/share/goal_awareness_scenario
+ros2 launch cognitive_nav mirte_house.launch.py \
+  world:=$SCEN/worlds/scenario_house.world \
+  robot_xacro_path:=$SCEN/urdf/scenario_mirte_master.xacro
+```
+
 ```bash
 ros2 launch goal_awareness_scenario navigation.launch.py
 ```

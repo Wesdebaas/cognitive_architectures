@@ -54,6 +54,17 @@ def generate_launch_description():
     description='Gazebo world'
   )
 
+  robot_xacro_path = PathJoinSubstitution([
+    FindPackageShare('mirte_master_description'),
+    'urdf',
+    'mirte_master.xacro'
+  ])
+  robot_xacro_arg = DeclareLaunchArgument(
+    'robot_xacro_path',
+    default_value=robot_xacro_path,
+    description='Robot description xacro'
+  )
+
   gz_sim = IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
       PathJoinSubstitution([
@@ -74,6 +85,9 @@ def generate_launch_description():
   
   spawn_mirte_master = IncludeLaunchDescription(
     XMLLaunchDescriptionSource(spawn_mirte_master_path),
+    launch_arguments={
+      'robot_xacro_path': LaunchConfiguration('robot_xacro_path'),
+    }.items(),
   )
 
  # Move arm out of the camera field of view
@@ -150,6 +164,7 @@ def generate_launch_description():
     headless_arg,
     use_sim_time_arg,
     world_arg,
+    robot_xacro_arg,
     gz_sim,
     spawn_mirte_master,
     park_arm,
