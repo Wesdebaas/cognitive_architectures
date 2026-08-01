@@ -13,6 +13,8 @@
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
   <exec_depend>nav2_simple_commander</exec_depend>
+  <exec_depend>goal_awareness_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

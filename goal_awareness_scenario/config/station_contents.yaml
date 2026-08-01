@@ -1,0 +1,9 @@
+# What each station currently holds. Re-read on every inspection, so edits 
+# can take effect between inspections without restarting the node.
+
+cooking_bench:   [{item: roast, quantity: 0.6}]
+kitchen_table:   [{item: place_setting, quantity: 2.0}]
+trash:           [{item: rubbish, quantity: 0.3}]
+refrigerator:    [{item: juice, quantity: 1.0}]
+kitchen_cabinet: []
+tv_cabinet:      [{item: spare_wine, quantity: 1.0}]
