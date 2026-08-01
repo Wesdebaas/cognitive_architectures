@@ -1,0 +1,55 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix cn:   <http://cognitive-nav.org/ontology#> .
+
+
+# Goal-awareness scenario ontology (TBox + the fixed individuals).
+
+# Classes
+
+cn:Station         a owl:Class .  # somewhere the robot drives to and looks inside
+cn:ItemType        a owl:Class .  # a kind of item
+cn:Inspection      a owl:Class .  # one look inside one station at one moment
+cn:ItemObservation a owl:Class .  # one item found during one inspection
+
+# Properties
+
+cn:atStation    a owl:ObjectProperty ;
+    rdfs:domain cn:Inspection ;
+    rdfs:range  cn:Station .
+
+cn:observedItem a owl:ObjectProperty ;
+    rdfs:domain cn:Inspection ;
+    rdfs:range  cn:ItemObservation .
+
+cn:ofItem       a owl:ObjectProperty ;
+    rdfs:domain cn:ItemObservation ;
+    rdfs:range  cn:ItemType .
+
+cn:quantity     a owl:DatatypeProperty ;
+    rdfs:domain cn:ItemObservation ;
+    rdfs:range  xsd:double .
+
+cn:observedAt   a owl:DatatypeProperty ;
+    rdfs:domain cn:Inspection ;
+    rdfs:range  xsd:dateTime .
+
+# Stations
+
+cn:cooking_bench   a cn:Station .
+cn:kitchen_table   a cn:Station .
+cn:trash           a cn:Station .
+cn:refrigerator    a cn:Station .
+cn:kitchen_cabinet a cn:Station .
+cn:tv_cabinet      a cn:Station .
+
+# Item kinds 
+
+cn:roast         a cn:ItemType .
+cn:place_setting a cn:ItemType .
+cn:rubbish       a cn:ItemType .
+cn:juice         a cn:ItemType .
+cn:wine          a cn:ItemType .
+cn:spare_wine    a cn:ItemType .
+

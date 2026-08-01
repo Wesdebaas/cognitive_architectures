@@ -1,0 +1,22 @@
+{#-
+  One goal_awareness_msgs/InspectionResult  ->  one SPARQL INSERT.
+
+  ALWAYS emits, even when contents is empty. "I looked and found nothing" is a
+  fact. It is how the wine shortage is discovered, and it is what refreshes
+  staleness for the station. Rendering an empty string here would make the KB
+  unable to distinguish "empty cabinet" from "never went there".
+-#}
+{%- set stamp = msg.header.stamp -%}
+{%- set id = msg.station ~ '_' ~ stamp.sec ~ '_' ~ stamp.nanosec -%}
+PREFIX cn: <http://cognitive-nav.org/ontology#>
+INSERT DATA {
+  cn:inspection_{{ id }} a cn:Inspection ;
+      cn:atStation  cn:{{ msg.station }} ;
+      cn:observedAt {{ stamp | rdf }} .
+{% for c in msg.contents %}
+  cn:obs_{{ id }}_{{ loop.index0 }} a cn:ItemObservation ;
+      cn:ofItem   cn:{{ c.item }} ;
+      cn:quantity {{ c.quantity | rdf }} .
+  cn:inspection_{{ id }} cn:observedItem cn:obs_{{ id }}_{{ loop.index0 }} .
+{% endfor -%}
+}
