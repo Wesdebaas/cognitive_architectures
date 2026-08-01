@@ -1,0 +1,11 @@
+# Each entry creates a ROS service backed by a SPARQL query file from the
+# queries/ directory.
+
+query_services:
+  count_triples:
+    query_file: count_triples.sparql
+    reasoning: false
+
+  all_triples:
+    query_file: get_all_triples.sparql
+    reasoning: false

@@ -1,0 +1,8 @@
+# Insertion subscribers run a Jinja2 SPARQL template on every message
+# received on the given topic, inserting the result into the KB.
+
+insertion_subscribers:
+  inspection_results:
+    topic: "/scenario/inspection_result"
+    template: "inspection_result.sparql.tmpl"
+    
