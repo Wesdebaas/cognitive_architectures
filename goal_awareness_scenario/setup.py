@@ -32,6 +32,7 @@ setup(
             'ground_truth_localization = goal_awareness_scenario.ground_truth_localization:main',
             'travel_time_tour = goal_awareness_scenario.travel_time_tour:main',
             'inspection_node = goal_awareness_scenario.inspection_node:main',
+            'scenario_tour = goal_awareness_scenario.scenario_tour:main',
         ],
     },
 )
