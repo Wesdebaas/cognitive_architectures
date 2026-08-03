@@ -13,3 +13,7 @@ query_services:
   semantic_edges:
     query_file: semantic_edges.sparql
     reasoning: false
+
+  last_observed:
+    query_file: last_observed.sparql
+    reasoning: false

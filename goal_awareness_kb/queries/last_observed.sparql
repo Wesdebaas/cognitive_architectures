@@ -1,0 +1,12 @@
+# Most recent inspection time per station. Stations never inspected are absent.
+
+PREFIX cn: <http://cognitive-nav.org/ontology#>
+
+SELECT ?station (MAX(?t) AS ?last_observed)
+WHERE {
+  ?inspection a cn:Inspection ;
+      cn:atStation  ?station ;
+      cn:observedAt ?t .
+}
+GROUP BY ?station
+ORDER BY ?station
