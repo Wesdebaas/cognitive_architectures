@@ -1,7 +1,8 @@
 """Priority P = E x A, aggregated per station."""
 
 from attention import CN, attention, distances, load_edges, load_storage, name
-from epistemic import STALENESS_TIME, epistemic_error
+from epistemic import epistemic_error
+from params import load
 
 def priority(attention_by_item, error_by_item, storage):
     """P(station) = sum of E(item) * A(item) over the items kept there."""
@@ -12,7 +13,9 @@ def priority(attention_by_item, error_by_item, storage):
 
 
 if __name__ == '__main__':
-    alpha = 0.3
+    params = load()
+    alpha = params['alpha']
+    staleness_time = params['staleness_time']
 
     # Demo for the KB query: seconds since each item was last observed, inf meaning never. 
     last_seen = {
@@ -27,7 +30,7 @@ if __name__ == '__main__':
     edges = load_edges()
     storage = load_storage()
 
-    E = {item: epistemic_error(t, STALENESS_TIME[item]) for item, t in last_seen.items()}
+    E = {item: epistemic_error(t, staleness_time[item]) for item, t in last_seen.items()}
 
     print('E, from last_seen:')
     for item, e in sorted(E.items()):

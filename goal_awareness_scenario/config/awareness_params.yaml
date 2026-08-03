@@ -1,0 +1,17 @@
+# Awareness manager tuning constants. Keep identical across all three scenarios 
+# and across the AM-on / AM-off conditions.
+
+# Relevance lost per hop in A = (1 - alpha)^d.
+alpha: 0.3
+
+# Seconds after an observation at which knowledge of an item is worthless.
+# Placeholder values, NEED TUNING.
+staleness_time:
+  rubbish: 240.0
+  roast: 400.0
+  place_setting: 600.0
+  juice: 900.0
+  wine: 900.0
+  # long on purpose to keep tv_cabinet out of the ranking, also realistic
+  # because stock isn't changing as often
+  spare_wine: 3600.0
