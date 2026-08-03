@@ -1,8 +1,10 @@
 """Priority P = E x A, aggregated per station."""
 
-from attention import CN, attention, distances, load_edges, load_storage, name
-from epistemic import epistemic_error
-from params import load
+from goal_awareness_scenario.attention import (
+    CN, attention, distances, load_edges, load_storage, name,
+)
+from goal_awareness_scenario.epistemic import epistemic_error
+from goal_awareness_scenario.params import load
 
 def priority(attention_by_item, error_by_item, storage):
     """P(station) = sum of E(item) * A(item) over the items kept there."""

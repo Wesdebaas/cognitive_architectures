@@ -1,0 +1,4 @@
+---
+bool available          # false when nothing has priority above zero
+string station
+float64 priority

@@ -12,19 +12,30 @@ import rclpy
 from rclpy.node import Node
 
 from ament_index_python.packages import get_package_share_directory
-from goal_awareness_msgs.msg import InspectionResult
+from goal_awareness_msgs.msg import AwarenessState, InspectionResult, NamedValue
+from goal_awareness_msgs.srv import NextStation
 from goal_awareness_scenario import params
+from goal_awareness_scenario.attention import attention, distances, name
 from goal_awareness_scenario.epistemic import epistemic_error
 from goal_awareness_scenario.inspection_node import RESULT_TOPIC
+from goal_awareness_scenario.priority import priority
 from triplestar_msgs.srv import SelectQuery
 
 EDGES_SERVICE = '/triplestar/query/semantic_edges'
 LAST_OBSERVED_SERVICE = '/triplestar/query/last_observed'
+NEXT_STATION_SERVICE = '/awareness/next_station'
+STATE_TOPIC = '/awareness/state'
 CN = 'http://cognitive-nav.org/ontology#'
+TICK_PERIOD = 1.0
 
 
 def short(uri):
     return uri.rsplit('#', 1)[-1]
+
+
+def named(values):
+    """Sorted by name, so array indices stay stable for rqt_plot."""
+    return [NamedValue(name=key, value=float(value)) for key, value in sorted(values.items())]
 
 
 def to_posix(stamp):
@@ -45,14 +56,21 @@ class AwarenessManager(Node):
             'config', 'awareness_params.yaml',
         )
         self.params = params.load(config)
+        self.declare_parameter('active_goal', 'prepare_dinner')
 
         self.graph = {}
         self.storage = {}
         self.last_observed = {}
+        self._top = None
 
         self._edges = self.create_client(SelectQuery, EDGES_SERVICE)
         self._last_observed = self.create_client(SelectQuery, LAST_OBSERVED_SERVICE)
         self.create_subscription(InspectionResult, RESULT_TOPIC, self._on_inspection, 10)
+        self.create_service(NextStation, NEXT_STATION_SERVICE, self._on_next_station)
+        self._state = self.create_publisher(AwarenessState, STATE_TOPIC, 10)
+        self.create_timer(TICK_PERIOD, self._tick)
+
+    # knowledge base 
 
     def fetch_graph(self, timeout=10.0):
         """Read the semantic graph from the KB. Startup only: the graph is static."""
@@ -73,6 +91,11 @@ class AwarenessManager(Node):
             if relation == CN + 'storedIn':
                 self.storage.setdefault(short(target), []).append(short(source))
 
+        edges = sum(len(t) for t in self.graph.values())
+        nodes = set(self.graph) | {t for targets in self.graph.values() for t in targets}
+        self.get_logger().info(
+            f'{edges} edges over {len(nodes)} nodes, alpha = {self.params["alpha"]}')
+
     def request_last_observed(self, timeout=10.0):
         """Ask the KB when each station was last inspected. Returns the future."""
         if not self._last_observed.wait_for_service(timeout_sec=timeout):
@@ -91,11 +114,13 @@ class AwarenessManager(Node):
             short(row['station']['value']): to_posix(row['last_observed']['value'])
             for row in json.loads(response.result)['results']['bindings']
         }
-        self.log_state()
+        self.get_logger().info(f'inspected: {sorted(self.last_observed) or "nothing yet"}')
 
     def _on_inspection(self, msg):
         """An inspection landed in the KB, so the cached timestamps are stale."""
         self.request_last_observed()
+
+    # the ranking 
 
     def epistemic_errors(self, now=None):
         """E per item type. A station's inspection refreshes every item kept there."""
@@ -111,15 +136,55 @@ class AwarenessManager(Node):
                 errors[item] = epistemic_error(elapsed, staleness[item])
         return errors
 
-    def log_state(self):
-        edges = sum(len(t) for t in self.graph.values())
-        nodes = set(self.graph) | {t for targets in self.graph.values() for t in targets}
-        self.get_logger().info(f'{edges} edges over {len(nodes)} nodes, alpha = {self.params["alpha"]}')
-        self.get_logger().info(f'inspected stations: {sorted(self.last_observed) or "none yet"}')
+    def compute(self):
+        """E per item, A per item, P per station, for the goal that is active now."""
+        goal = self.get_parameter('active_goal').value
         errors = self.epistemic_errors()
-        self.get_logger().info(
-            'E: ' + '  '.join(f'{item}={e:.3f}' for item, e in sorted(errors.items()))
-        )
+
+        if CN + goal not in self.graph:
+            self.get_logger().warn(f'active_goal "{goal}" is not in the semantic graph')
+            return goal, errors, {}, {}
+
+        reached = distances(self.graph, CN + goal)
+        spread = {name(node): value
+                  for node, value in attention(reached, self.params['alpha']).items()}
+        attentions = {item: spread.get(item, 0.0) for item in errors}
+        return goal, errors, attentions, priority(attentions, errors, self.storage)
+
+    def ranking(self):
+        """Stations worth observing, best first. Stations at P = 0 are dropped."""
+        _, _, _, p = self.compute()
+        return sorted(((s, v) for s, v in p.items() if v > 0.0), key=lambda row: -row[1])
+
+    def _tick(self):
+        goal, errors, attentions, p = self.compute()
+
+        state = AwarenessState()
+        state.header.stamp = self.get_clock().now().to_msg()
+        state.active_goal = goal
+        state.epistemic_error = named(errors)
+        state.attention = named(attentions)
+        state.priority = named(p)
+        self._state.publish(state)
+
+        ranked = sorted(((s, v) for s, v in p.items() if v > 0.0), key=lambda row: -row[1])
+        top = ranked[0][0] if ranked else None
+        if top == self._top:
+            return
+
+        self._top = top
+        if ranked:
+            self.get_logger().info(
+                'ranking: ' + '  '.join(f'{s}={v:.3f}' for s, v in ranked[:3]))
+        else:
+            self.get_logger().info('nothing worth observing')
+
+    def _on_next_station(self, request, response):
+        ranked = self.ranking()
+        response.available = bool(ranked)
+        if ranked:
+            response.station, response.priority = ranked[0]
+        return response
 
 
 def main():

@@ -7,7 +7,7 @@ def epistemic_error(elapsed, staleness_time):
 
 
 if __name__ == '__main__':
-    from params import load
+    from goal_awareness_scenario.params import load
 
     staleness_time = load()['staleness_time']
     elapsed_times = [0, 25, 50, 100, 150, 300, 600]
