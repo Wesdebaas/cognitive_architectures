@@ -10,3 +10,9 @@ clear_on_startup: true
 # Turtle files to load at startup.
 preload_files:
   - scenario_ontology.ttl
+  - semantic_graph.ttl
+  
+  # swap to change scenario
+  - guests_mixed.ttl
+  # - guests_children.ttl
+  # - guests_adults.ttl

@@ -1,0 +1,5 @@
+@prefix cn: <http://cognitive-nav.org/ontology#> .
+
+# Scenario 2 of 3: adults only. Juice and refrigerator are unreachable.
+
+cn:serve_guests cn:involves cn:adult .

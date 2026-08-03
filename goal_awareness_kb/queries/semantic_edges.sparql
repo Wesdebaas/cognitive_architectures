@@ -1,0 +1,20 @@
+# The semantic graph as a flat directed edge list.
+# Second UNION branch materialises the reverse of symmetric properties.
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+PREFIX cn:   <http://cognitive-nav.org/ontology#>
+
+SELECT DISTINCT ?from ?relation ?to
+WHERE {
+  {
+    ?relation rdfs:subPropertyOf cn:semanticEdge .
+    ?from ?relation ?to .
+  }
+  UNION
+  {
+    ?relation rdfs:subPropertyOf cn:semanticEdge .
+    ?relation a owl:SymmetricProperty .
+    ?to ?relation ?from .
+  }
+}

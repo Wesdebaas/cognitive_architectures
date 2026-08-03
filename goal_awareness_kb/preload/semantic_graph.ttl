@@ -1,0 +1,91 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix cn:   <http://cognitive-nav.org/ontology#> .
+
+
+# The semantic graph: what attention A is computed over.
+# Traversed directed and unit-weighted, so d is the hop count.
+
+# Classes
+
+cn:Goal          a owl:Class .
+cn:GoalComponent a owl:Class .
+
+cn:Subtask   a owl:Class ; rdfs:subClassOf cn:GoalComponent .
+cn:GuestType a owl:Class ; rdfs:subClassOf cn:GoalComponent .
+
+# Properties
+
+cn:semanticEdge a owl:ObjectProperty .   # marks a predicate as traversable
+
+cn:involves a owl:ObjectProperty ;
+    rdfs:subPropertyOf cn:semanticEdge ;
+    rdfs:domain cn:Goal ;
+    rdfs:range  cn:GoalComponent .
+
+cn:concerns a owl:ObjectProperty ;
+    rdfs:subPropertyOf cn:semanticEdge ;
+    rdfs:domain cn:Subtask ;
+    rdfs:range  cn:ItemType .
+
+cn:prefers a owl:ObjectProperty ;
+    rdfs:subPropertyOf cn:semanticEdge ;
+    rdfs:domain cn:GuestType ;
+    rdfs:range  cn:ItemType .
+
+cn:storedIn a owl:ObjectProperty ;
+    rdfs:subPropertyOf cn:semanticEdge ;
+    rdfs:domain cn:ItemType ;
+    rdfs:range  cn:Station .
+
+cn:requires a owl:ObjectProperty ;
+    rdfs:subPropertyOf cn:semanticEdge ;
+    rdfs:domain cn:Goal ;
+    rdfs:range  cn:ItemType .
+
+cn:substituteFor a owl:ObjectProperty , owl:SymmetricProperty ;
+    rdfs:subPropertyOf cn:semanticEdge ;
+    rdfs:domain cn:ItemType ;
+    rdfs:range  cn:ItemType .
+
+# Goals
+
+cn:prepare_dinner a cn:Goal .
+cn:serve_guests   a cn:Goal .
+cn:restock_wine   a cn:Goal .
+
+# Goal components
+
+cn:cooking      a cn:Subtask .
+cn:table_laying a cn:Subtask .
+cn:tidying      a cn:Subtask .
+
+cn:child a cn:GuestType .
+cn:adult a cn:GuestType .
+
+# Phase 1
+
+cn:prepare_dinner cn:involves cn:cooking , cn:table_laying , cn:tidying .
+
+cn:cooking      cn:concerns cn:roast .
+cn:table_laying cn:concerns cn:place_setting .
+cn:tidying      cn:concerns cn:rubbish .
+
+cn:roast         cn:storedIn cn:cooking_bench .
+cn:place_setting cn:storedIn cn:kitchen_table .
+cn:rubbish       cn:storedIn cn:trash .
+
+# Phase 2  (serve_guests cn:involves ... lives in guests_*.ttl)
+
+cn:child cn:prefers cn:juice .
+cn:adult cn:prefers cn:wine .
+
+cn:juice cn:storedIn cn:refrigerator .
+cn:wine  cn:storedIn cn:kitchen_cabinet .
+
+# Recovery
+
+cn:spare_wine cn:storedIn cn:tv_cabinet .
+cn:spare_wine cn:substituteFor cn:wine .
+
+cn:restock_wine cn:requires cn:spare_wine .

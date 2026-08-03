@@ -1,0 +1,5 @@
+@prefix cn: <http://cognitive-nav.org/ontology#> .
+
+# Scenario 3 of 3: mixed party. Both phase-2 branches reachable.
+
+cn:serve_guests cn:involves cn:child , cn:adult .

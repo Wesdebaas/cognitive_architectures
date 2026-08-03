@@ -9,3 +9,7 @@ query_services:
   all_triples:
     query_file: get_all_triples.sparql
     reasoning: false
+
+  semantic_edges:
+    query_file: semantic_edges.sparql
+    reasoning: false

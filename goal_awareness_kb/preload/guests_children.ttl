@@ -1,0 +1,5 @@
+@prefix cn: <http://cognitive-nav.org/ontology#> .
+
+# Scenario 1 of 3: children only. Wine and kitchen_cabinet are unreachable.
+
+cn:serve_guests cn:involves cn:child .
