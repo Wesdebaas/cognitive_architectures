@@ -9,6 +9,7 @@ import os
 from datetime import datetime, timezone
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
 from ament_index_python.packages import get_package_share_directory
@@ -68,7 +69,6 @@ class AwarenessManager(Node):
         self.create_subscription(InspectionResult, RESULT_TOPIC, self._on_inspection, 10)
         self.create_service(NextStation, NEXT_STATION_SERVICE, self._on_next_station)
         self._state = self.create_publisher(AwarenessState, STATE_TOPIC, 10)
-        self.create_timer(TICK_PERIOD, self._tick)
 
     # knowledge base 
 
@@ -95,6 +95,9 @@ class AwarenessManager(Node):
         nodes = set(self.graph) | {t for targets in self.graph.values() for t in targets}
         self.get_logger().info(
             f'{edges} edges over {len(nodes)} nodes, alpha = {self.params["alpha"]}')
+
+        # Only start ranking once there is a graph to rank over.
+        self.create_timer(TICK_PERIOD, self._tick)
 
     def request_last_observed(self, timeout=10.0):
         """Ask the KB when each station was last inspected. Returns the future."""
@@ -194,7 +197,7 @@ def main():
         node.fetch_graph()
         rclpy.spin_until_future_complete(node, node.request_last_observed())
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.destroy_node()
