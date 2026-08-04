@@ -38,6 +38,11 @@ def generate_launch_description():
             'world': os.path.join(scenario, 'worlds', 'scenario_house.world'),
             'robot_xacro_path': os.path.join(
                 scenario, 'urdf', 'scenario_mirte_master.xacro'),
+            # The robot drives to waypoints that are already known, and facts
+            # reach the knowledge base from /scenario/inspection_result rather
+            # than from a detection, so nothing here consumes object detection.
+            # Disabled to speed up the simulation. 
+            'use_yolo': 'false',
         }.items(),
     )
 

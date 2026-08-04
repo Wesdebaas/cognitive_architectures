@@ -19,6 +19,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription, ExecuteProcess, TimerAction
+from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
@@ -63,6 +64,12 @@ def generate_launch_description():
     'robot_xacro_path',
     default_value=robot_xacro_path,
     description='Robot description xacro'
+  )
+
+  use_yolo_arg = DeclareLaunchArgument(
+    'use_yolo',
+    default_value='true',
+    description='Run object detection. Costs about 8 cores on CPU'
   )
 
   gz_sim = IncludeLaunchDescription(
@@ -148,6 +155,7 @@ def generate_launch_description():
         'use_tracking': 'True',
         'device': 'cpu',
     }.items(),
+    condition=IfCondition(LaunchConfiguration('use_yolo')),
   )
 
   camera_info_bridge = Node(
@@ -165,6 +173,7 @@ def generate_launch_description():
     use_sim_time_arg,
     world_arg,
     robot_xacro_arg,
+    use_yolo_arg,
     gz_sim,
     spawn_mirte_master,
     park_arm,
