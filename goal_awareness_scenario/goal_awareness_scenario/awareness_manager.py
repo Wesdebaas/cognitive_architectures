@@ -5,15 +5,17 @@ which import no ROS and can be run and checked on their own.
 """
 
 import json
+import math
 import os
 from datetime import datetime, timezone
 
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile
 
 from ament_index_python.packages import get_package_share_directory
-from goal_awareness_msgs.msg import AwarenessState, InspectionResult, NamedValue
+from goal_awareness_msgs.msg import AwarenessState, GoalSet, InspectionResult, NamedValue
 from goal_awareness_msgs.srv import NextStation
 from goal_awareness_scenario import params
 from goal_awareness_scenario.attention import attention, distances, name
@@ -25,9 +27,12 @@ from triplestar_msgs.srv import SelectQuery
 EDGES_SERVICE = '/triplestar/query/semantic_edges'
 LAST_OBSERVED_SERVICE = '/triplestar/query/last_observed'
 NEXT_STATION_SERVICE = '/awareness/next_station'
+MISSION_TOPIC = '/scenario/mission'
 STATE_TOPIC = '/awareness/state'
 CN = 'http://cognitive-nav.org/ontology#'
 TICK_PERIOD = 1.0
+
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 
 def short(uri):
@@ -57,15 +62,18 @@ class AwarenessManager(Node):
             'config', 'awareness_params.yaml',
         )
         self.params = params.load(config)
-        self.declare_parameter('active_goal', 'prepare_dinner')
+
+        self.declare_parameter('use_anticipatory_horizon', True)
 
         self.graph = {}
         self.storage = {}
         self.last_observed = {}
+        self.eta = {}
         self._top = None
 
         self._edges = self.create_client(SelectQuery, EDGES_SERVICE)
         self._last_observed = self.create_client(SelectQuery, LAST_OBSERVED_SERVICE)
+        self.create_subscription(GoalSet, MISSION_TOPIC, self._on_mission, LATCHED)
         self.create_subscription(InspectionResult, RESULT_TOPIC, self._on_inspection, 10)
         self.create_service(NextStation, NEXT_STATION_SERVICE, self._on_next_station)
         self._state = self.create_publisher(AwarenessState, STATE_TOPIC, 10)
@@ -139,20 +147,54 @@ class AwarenessManager(Node):
                 errors[item] = epistemic_error(elapsed, staleness[item])
         return errors
 
+    def _on_mission(self, msg):
+        """The executive says what the mission is. It repeats itself, so only log changes."""
+        eta = {g.name: g.eta.sec + g.eta.nanosec / 1e9 for g in msg.goals}
+        if eta != self.eta:
+            self.get_logger().info(f'mission: {sorted(eta)}')
+        self.eta = eta
+
+    def goals(self, now=None):
+        """The mission, as {goal: weight}.
+
+        A goal that has started is worth its full attention. One that has not
+        is discounted by how far away it is in time, and without the horizon 
+        it is worth nothing, which is the same as not being in the mission at all.
+        """
+        if now is None:
+            now = self.get_clock().now().nanoseconds / 1e9
+        horizon = self.get_parameter('use_anticipatory_horizon').value
+        decay = math.log(2.0) / self.params['horizon_halflife']
+
+        weights = {}
+        for goal, eta in self.eta.items():
+            ahead = eta - now
+            if ahead <= 0.0:
+                weights[goal] = 1.0
+            elif horizon:
+                weights[goal] = math.exp(-decay * ahead)
+        return weights
+
+    def combined_attention(self, goals):
+        """A per item, summed over the goals and scaled by each one's weight."""
+        combined = {}
+        for goal, weight in goals.items():
+            if CN + goal not in self.graph:
+                self.get_logger().warn(f'goal "{goal}" is not in the semantic graph')
+                continue
+            reached = distances(self.graph, CN + goal)
+            for node, value in attention(reached, self.params['alpha']).items():
+                item = name(node)
+                combined[item] = combined.get(item, 0.0) + weight * value
+        return combined
+
     def compute(self):
-        """E per item, A per item, P per station, for the goal that is active now."""
-        goal = self.get_parameter('active_goal').value
+        """E per item, A per item, P per station, for the goals that are active now."""
+        goals = self.goals()
         errors = self.epistemic_errors()
-
-        if CN + goal not in self.graph:
-            self.get_logger().warn(f'active_goal "{goal}" is not in the semantic graph')
-            return goal, errors, {}, {}
-
-        reached = distances(self.graph, CN + goal)
-        spread = {name(node): value
-                  for node, value in attention(reached, self.params['alpha']).items()}
+        spread = self.combined_attention(goals)
         attentions = {item: spread.get(item, 0.0) for item in errors}
-        return goal, errors, attentions, priority(attentions, errors, self.storage)
+        return goals, errors, attentions, priority(attentions, errors, self.storage)
 
     def ranking(self):
         """Stations worth observing, best first. Stations at P = 0 are dropped."""
@@ -160,11 +202,12 @@ class AwarenessManager(Node):
         return sorted(((s, v) for s, v in p.items() if v > 0.0), key=lambda row: -row[1])
 
     def _tick(self):
-        goal, errors, attentions, p = self.compute()
+        goals, errors, attentions, p = self.compute()
 
         state = AwarenessState()
         state.header.stamp = self.get_clock().now().to_msg()
-        state.active_goal = goal
+        state.mission = ' '.join(f'{goal}={weight:.2f}'
+                                 for goal, weight in sorted(goals.items()))
         state.epistemic_error = named(errors)
         state.attention = named(attentions)
         state.priority = named(p)

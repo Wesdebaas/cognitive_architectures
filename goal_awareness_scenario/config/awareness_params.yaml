@@ -4,6 +4,10 @@
 # Relevance lost per hop in A = (1 - alpha)^d.
 alpha: 0.3
 
+# A goal counts 100% once it starts. This many seconds before it starts it
+# counts 50%, twice as many seconds before 25%, and so on.
+horizon_halflife: 60.0 # needs tuning
+
 # Seconds after an observation at which knowledge of an item is worthless.
 # If factor between two values in one phase is <2, 
 # it will cycle between the three stations. 

@@ -22,7 +22,7 @@ class AwarenessMonitor(Node):
             return
 
         attention = {a.name: a.value for a in msg.attention}
-        lines = [f'\n{msg.active_goal}', f'  {"station":<17}{"P":>8}']
+        lines = [f'\n{msg.mission}', f'  {"station":<17}{"P":>8}']
         for station in sorted(msg.priority, key=lambda p: -p.value):
             lines.append(f'  {station.name:<17}{station.value:>8.3f}')
 

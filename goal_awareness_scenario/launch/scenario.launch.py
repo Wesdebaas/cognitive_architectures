@@ -16,6 +16,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, Time
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 
 # Seconds after launch. Needed for timing node startups.
@@ -70,7 +71,10 @@ def generate_launch_description():
         package='goal_awareness_scenario',
         executable='awareness_manager',
         name='awareness_manager',
-        parameters=[sim_time],
+        parameters=[sim_time, {
+            'use_anticipatory_horizon': ParameterValue(
+                LaunchConfiguration('use_anticipatory_horizon'), value_type=bool),
+        }],
         output='screen',
     )
 
@@ -88,6 +92,8 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'max_inspections', default_value='15',
             description='The executive stops after this many; there is no goal yet'),
+        DeclareLaunchArgument(
+            'use_anticipatory_horizon', default_value='true'),
         simulator,
         TimerAction(period=NAV_DELAY, actions=[navigation]),
         TimerAction(period=INSPECTION_DELAY, actions=[inspection]),
