@@ -1,0 +1,29 @@
+# Goals with nothing left to find. An item counts as found when the last
+# inspection of the station it is kept in saw it, or saw a substitute for it.
+
+PREFIX cn: <http://cognitive-nav.org/ontology#>
+
+SELECT ?goal
+WHERE {
+  ?goal a cn:Goal .
+
+  FILTER NOT EXISTS {
+    ?goal (cn:involves|cn:requires)/(cn:concerns|cn:prefers)? ?item .
+    ?item a cn:ItemType .
+
+    FILTER NOT EXISTS {
+      ?item (cn:substituteFor|^cn:substituteFor)? ?alternative .
+      ?alternative cn:storedIn ?station .
+
+      ?inspection cn:atStation  ?station ;
+                  cn:observedAt ?t ;
+                  cn:observedItem/cn:ofItem ?alternative .
+      FILTER NOT EXISTS {
+        ?later cn:atStation  ?station ;
+               cn:observedAt ?t2 .
+        FILTER (?t2 > ?t)
+      }
+    }
+  }
+}
+ORDER BY ?goal

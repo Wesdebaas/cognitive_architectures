@@ -17,3 +17,15 @@ query_services:
   last_observed:
     query_file: last_observed.sparql
     reasoning: false
+
+  missing_items:
+    query_file: missing_items.sparql
+    reasoning: false
+
+  satisfied_goals:
+    query_file: satisfied_goals.sparql
+    reasoning: false
+
+  item_locations:
+    query_file: item_locations.sparql
+    reasoning: false

@@ -1,0 +1,24 @@
+# Where to find what a goal needs. Reports the substitute when the item itself
+# was not there, so ?item is what is wanted and ?found is what is actually on
+# the shelf.
+
+PREFIX cn: <http://cognitive-nav.org/ontology#>
+
+SELECT ?goal ?item ?found ?station
+WHERE {
+  ?goal (cn:involves|cn:requires)/(cn:concerns|cn:prefers)? ?item .
+  ?item a cn:ItemType .
+
+  ?item (cn:substituteFor|^cn:substituteFor)? ?found .
+  ?found cn:storedIn ?station .
+
+  ?inspection cn:atStation  ?station ;
+              cn:observedAt ?t ;
+              cn:observedItem/cn:ofItem ?found .
+  FILTER NOT EXISTS {
+    ?later cn:atStation  ?station ;
+           cn:observedAt ?t2 .
+    FILTER (?t2 > ?t)
+  }
+}
+ORDER BY ?goal ?item

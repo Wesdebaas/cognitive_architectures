@@ -1,0 +1,22 @@
+# Items the last inspection of their storage station did not find, with the
+# goal that restores them. Stations never inspected are absent: an item can
+# only be missing somewhere the robot has looked.
+
+PREFIX cn: <http://cognitive-nav.org/ontology#>
+
+SELECT ?goal ?item ?station
+WHERE {
+  ?item cn:storedIn ?station .
+  ?goal cn:restores ?item .
+
+  ?inspection cn:atStation  ?station ;
+              cn:observedAt ?t .
+  FILTER NOT EXISTS {
+    ?later cn:atStation  ?station ;
+           cn:observedAt ?t2 .
+    FILTER (?t2 > ?t)
+  }
+
+  FILTER NOT EXISTS { ?inspection cn:observedItem/cn:ofItem ?item . }
+}
+ORDER BY ?goal

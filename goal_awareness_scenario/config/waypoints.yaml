@@ -1,4 +1,13 @@
 frame_id: map
+
+# Where the robot meets the guests to report what it found. Not a station.
+front_door:
+  x: 5.95
+  y: -5.21
+  yaw: -1.5268
+  qz: -0.6914
+  qw: 0.7225
+
 stations:
   cooking_bench:
     x: 8.3

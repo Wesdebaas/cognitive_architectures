@@ -91,7 +91,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_rviz', default_value='true'),
         DeclareLaunchArgument(
             'max_inspections', default_value='15',
-            description='The executive stops after this many; there is no goal yet'),
+            description='The executive gives up after this many if the goal is never met'),
         DeclareLaunchArgument(
             'use_anticipatory_horizon', default_value='true'),
         simulator,
