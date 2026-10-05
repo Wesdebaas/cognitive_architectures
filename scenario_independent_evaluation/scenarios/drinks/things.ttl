@@ -2,14 +2,14 @@
 
 
 # The places where the robot can look.
-cn:refrigerator a cn:Place .
-cn:bar          a cn:Place .
-cn:dishwasher   a cn:Place .
-cn:oven         a cn:Place .
-cn:drawer       a cn:Place .
-cn:sink         a cn:Place .
-cn:table        a cn:Place .
-cn:trash_can    a cn:Place .
+cn:refrigerator_1 a cn:Place .
+cn:bar_1          a cn:Place .
+cn:dishwasher_1   a cn:Place .
+cn:oven_1         a cn:Place .
+cn:drawer_1       a cn:Place .
+cn:sink_1         a cn:Place .
+cn:table_1        a cn:Place .
+cn:trash_can_1    a cn:Place .
 
 # The items in the scenario.
 cn:juice  a cn:Item .

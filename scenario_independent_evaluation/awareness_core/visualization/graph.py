@@ -3,6 +3,7 @@
 Graph 1: goal -> conditions -> items, plus every place and item in the scenario.
 Graph 2: goal -> conditions -> items, plus each item's ConceptNet word and that word's ConceptNet edges.
 Graph 3: graph 2 pruned to the scenario's own words, linked back to their things.
+Graph 4: graph 3 condensed: each item -> place link becomes a belief with its relevance A.
 
 Run:  python3 graph.py <scenario folder> <goal>
 python3 graph.py ../../scenarios/drinks serve_guests
@@ -14,6 +15,7 @@ from pathlib import Path
 import pyoxigraph as ox
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import beliefs
 import conceptnet
 import soma
 
@@ -21,7 +23,7 @@ CN = 'http://cognitive-nav.org/ontology#'
 DUL = 'http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#'
 
 # The types that say what kind of thing a node is.
-KINDS = {DUL + 'Goal': 'goal', CN + 'Condition': 'condition', CN + 'Item': 'item', CN + 'Place': 'place'}
+KINDS = {DUL + 'Goal': 'goal', CN + 'Condition': 'condition', CN + 'Item': 'item type', CN + 'Place': 'place'}
 
 
 def load(scenario):
@@ -68,7 +70,7 @@ def graph_2(store, goal):
     for row in store.query(query):
         item, word = soma.short(row['item']), row['word'].value
         edges.append((item, 'word', f'word:{word}'))
-        edges += [(f'word:{start}', relation, f'word:{end}') for relation, start, end, weight in conceptnet.edges(word)]
+        edges += [(f'word:{start}', f'{relation} {weight}', f'word:{end}') for relation, start, end, weight in conceptnet.edges(word)]
     edges = sorted(set(edges))
     return nodes_of(edges), edges
 
@@ -92,10 +94,20 @@ def graph_3(store, goal):
     return nodes_of(edges), edges
 
 
+def graph_4(store, goal):
+    """Goal -> conditions -> items, then item -> belief -> place for every derived belief, with its A."""
+    edges = goal_edges(store, goal)
+    for (item, place, claim), a in beliefs.derive_beliefs(store, goal).items():
+        belief = f'{item} @ {place}'
+        edges += [(item, claim, belief), (belief, f'A = {a:.3f}', place)]
+    edges = sorted(set(edges))
+    return nodes_of(edges), edges
+
+
 if __name__ == '__main__':
     scenario, goal = sys.argv[1], sys.argv[2]
     store = load(scenario)
-    for build in [graph_1, graph_2, graph_3]:
+    for build in [graph_1, graph_2, graph_3, graph_4]:
         nodes, edges = build(store, goal)
         print(f'== {build.__name__}: {len(nodes)} nodes')
         for edge in edges:
