@@ -1,0 +1,58 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix cn:   <http://cognitive-nav.org/ontology#> .
+
+
+# The word a thing is known by in ConceptNet 5.7.0.
+cn:conceptnetWord a owl:DatatypeProperty .
+
+
+# The things in this scenario.
+
+cn:juice a SOMA:Bottle ;                 # SOMA has no juice container
+    cn:conceptnetWord "juice" .
+
+cn:wine a SOMA:WineBottle ;
+    cn:conceptnetWord "wine" .
+
+cn:milk a SOMA:MilkBottle ;
+    cn:conceptnetWord "milk" .
+
+cn:bread a SOMA:Bread ;
+    cn:conceptnetWord "bread" .
+
+cn:plate a SOMA:Plate ;
+    cn:conceptnetWord "plate" .
+
+cn:cup a SOMA:Cup ;
+    cn:conceptnetWord "cup" .
+
+cn:knife a SOMA:Knife ;
+    cn:conceptnetWord "knife" .
+
+cn:cereal a SOMA:CerealBox ;
+    cn:conceptnetWord "cereal" .
+
+cn:refrigerator a SOMA:Refrigerator ;
+    cn:conceptnetWord "refrigerator" .
+
+cn:bar a SOMA:Cupboard ;                 # SOMA has no bar
+    cn:conceptnetWord "bar" .
+
+cn:dishwasher a SOMA:Dishwasher ;
+    cn:conceptnetWord "dishwasher" .
+
+cn:oven a SOMA:Oven ;
+    cn:conceptnetWord "oven" .
+
+cn:drawer a SOMA:Drawer ;
+    cn:conceptnetWord "drawer" .
+
+cn:sink a SOMA:Sink ;
+    cn:conceptnetWord "sink" .
+
+cn:table a SOMA:Table ;
+    cn:conceptnetWord "table" .
+
+cn:trash_can a SOMA:TrashContainer ;
+    cn:conceptnetWord "trash_can" .

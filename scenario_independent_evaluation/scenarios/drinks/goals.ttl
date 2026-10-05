@@ -1,0 +1,11 @@
+@prefix dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#> .
+@prefix cn:  <http://cognitive-nav.org/ontology#> .
+
+
+cn:serve_guests a dul:Goal ;
+    cn:requires cn:juice_present , cn:juice_cold , cn:wine_present , cn:two_bottles_of_wine .
+
+cn:juice_present       a cn:Condition ; cn:about cn:juice .
+cn:juice_cold          a cn:Condition ; cn:about cn:juice .
+cn:wine_present        a cn:Condition ; cn:about cn:wine .
+cn:two_bottles_of_wine a cn:Condition ; cn:about cn:wine .

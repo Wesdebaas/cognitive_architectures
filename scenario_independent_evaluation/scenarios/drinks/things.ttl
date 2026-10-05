@@ -1,0 +1,22 @@
+@prefix cn: <http://cognitive-nav.org/ontology#> .
+
+
+# The places where the robot can look.
+cn:refrigerator a cn:Place .
+cn:bar          a cn:Place .
+cn:dishwasher   a cn:Place .
+cn:oven         a cn:Place .
+cn:drawer       a cn:Place .
+cn:sink         a cn:Place .
+cn:table        a cn:Place .
+cn:trash_can    a cn:Place .
+
+# The items in the scenario.
+cn:juice  a cn:Item .
+cn:wine   a cn:Item .
+cn:milk   a cn:Item .
+cn:bread  a cn:Item .
+cn:plate  a cn:Item .
+cn:cup    a cn:Item .
+cn:knife  a cn:Item .
+cn:cereal a cn:Item .
