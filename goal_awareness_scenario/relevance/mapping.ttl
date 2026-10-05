@@ -1,0 +1,25 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix cn:   <http://cognitive-nav.org/ontology#> .
+
+
+# The word a thing is known by in ConceptNet 5.7.0.
+cn:conceptnetWord a owl:DatatypeProperty .
+
+
+# Phase 2 of the current scenario.
+
+cn:juice a SOMA:Bottle ;                 # SOMA has no juice container
+    cn:conceptnetWord "juice" .
+
+cn:wine a SOMA:WineBottle ;
+    cn:conceptnetWord "wine" .
+
+cn:refrigerator a SOMA:Refrigerator ;
+    cn:conceptnetWord "refrigerator" .
+
+cn:kitchen_cabinet a SOMA:KitchenCabinet ;
+    cn:conceptnetWord "kitchen_cabinet" .
+
+cn:tv_cabinet a SOMA:Cupboard ;          # SOMA has no TV cabinet
+    cn:conceptnetWord "cupboard" .       # 'tv_cabinet' has no ConceptNet edges; not 'cabinet' (also the government kind)

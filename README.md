@@ -100,10 +100,9 @@ Together these take the real-time factor from ~0.65 to >0.95. Physics was 60% of
 **Terminal 1 — simulation:**
 
 ```bash
-SCEN=$(ros2 pkg prefix goal_awareness_scenario)/share/goal_awareness_scenario
 ros2 launch cognitive_nav mirte_house.launch.py \
-  world:=$SCEN/worlds/scenario_house.world \
-  robot_xacro_path:=$SCEN/urdf/scenario_mirte_master.xacro
+  world:=$(ros2 pkg prefix goal_awareness_scenario)/share/goal_awareness_scenario/worlds/scenario_house.world \
+  robot_xacro_path:=$(ros2 pkg prefix goal_awareness_scenario)/share/goal_awareness_scenario/urdf/scenario_mirte_master.xacro
 ```
 
 **Terminal 2 — navigation:**
@@ -121,3 +120,12 @@ ros2 run goal_awareness_scenario travel_time_tour --ros-args -p use_sim_time:=tr
 `use_sim_time` is required, durations are read off the simulation clock. Every leg is appended to `goal_awareness_scenario/results/travel_times.csv` and saved to disk immediately, so if anything crashes you rerun the identical command and it resumes from what is already in the file. Options: `--repeats`, `--output`, `--waypoints`,
 `--max-legs`.
 
+
+Command to generate turtle file from SOMA owl files
+```bash
+java -jar ~/tools/robot/robot.jar merge \
+  --catalog ~/ros2_ws/src/soma/owl/catalog-v001.xml \
+  --input   ~/ros2_ws/src/soma/owl/SOMA-HOME.owl \
+  convert --format ttl \
+  --output  ~/ros2_ws/src/cognitive_architectures/scenario_independent_evaluation/ontologies/soma-home-2.1.0.ttl
+```

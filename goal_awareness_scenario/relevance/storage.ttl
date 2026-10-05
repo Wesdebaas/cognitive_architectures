@@ -1,0 +1,7 @@
+@prefix cn: <http://cognitive-nav.org/ontology#> .
+
+
+# Where each item is kept: inspecting the station confirms the item.
+
+cn:juice cn:storedIn cn:refrigerator .
+cn:wine  cn:storedIn cn:kitchen_cabinet .

@@ -31,3 +31,8 @@ repositories:
     type: git
     url: https://github.com/Juancams/aws-robomaker-small-warehouse-world.git
     version: a8ba1cea777799d51db58f759e4d2cfa2c81fd74   # branch: ros2-jazzy
+
+  soma:
+    type: git
+    url: https://github.com/ease-crc/soma.git
+    version: 90800c80067c4a61ed8f48c1d997b4bffdc98179   # tag: 2.1.0
