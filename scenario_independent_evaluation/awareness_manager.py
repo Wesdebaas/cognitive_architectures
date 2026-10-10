@@ -1,10 +1,12 @@
 """The awareness manager. Knows no scenario, ontology or commonsense source: a scenario's scenario.py
 gives it everything it uses. No ROS.
 
-  knowledge   one RDF store: goals, conditions, places, items, their words, action types, and an ontology
-  located_at  word -> [(place word, weight)]: where a commonsense source says the thing is
-  travel_time (from, to) -> seconds, or None if unreachable
-  parameters  {'T': {item: seconds until a belief about it is fully stale}, 'idle_threshold': P below which nothing is done}
+  knowledge        one RDF store: goals, conditions, places, items, their words, action types, and an ontology
+  association      word -> [(word, strength)]: the things a source associates with a word.
+                   Each (item, thing) pair becomes a belief about the item at that thing.
+  transition_cost  (from, to) -> seconds to get into position for an action at `to`, or None if impossible.
+                   Travel time for a driving robot, turning time for a pan-tilt camera, 0 for a fixed sensor.
+  parameters       {'T': {item: seconds until a belief about it is fully stale}, 'idle_threshold': P below which nothing is done}
 
 At run time it is told what was observed (observe) and asked what to do next (decide).
 """
@@ -31,16 +33,16 @@ def hop_factor(weight):
 
 class AwarenessManager:
 
-    def __init__(self, knowledge, located_at, travel_time, parameters):
+    def __init__(self, knowledge, association, transition_cost, parameters):
         self.knowledge = knowledge
-        self.located_at = located_at
-        self.travel_time = travel_time
+        self.association = association
+        self.transition_cost = transition_cost
         self.parameters = parameters
 
     def beliefs(self, goal):
-        """{(item, place, claim): A} for every place where the commonsense source says an item the goal needs is.
+        """{(item, place, claim): A} for every place the association source links to an item the goal needs.
 
-        A = A(item) x hop factor of the heaviest located-at edge, with A(item) = 1 because a condition names the item.
+        A = A(item) x hop factor of the strongest association, with A(item) = 1 because a condition names the item.
         """
         query = f'''SELECT DISTINCT ?item ?word WHERE {{
             <{AM}{goal}> <{AM}requires> ?condition . ?condition <{AM}about> ?item .
@@ -52,7 +54,7 @@ class AwarenessManager:
 
         weights = {}
         for item_word, item in items:
-            for end, weight in self.located_at(item_word):
+            for end, weight in self.association(item_word):
                 for place_word, place in places:
                     if end == place_word:
                         belief = (item, place, 'present')
@@ -119,10 +121,10 @@ class AwarenessManager:
         return sum(self.e(belief, t) * self.a[belief] for belief in self.b[action])
 
     def cost(self, action, position):
-        """Seconds: travel to the target plus the action's duration. None if the target is unreachable."""
+        """C in seconds: the transition to the target plus the action's duration. None if the target is unreachable."""
         action_type, target = action
-        travel = self.travel_time(position, target)
-        return None if travel is None else travel + self.durations[action_type]
+        transition = self.transition_cost(position, target)
+        return None if transition is None else transition + self.durations[action_type]
 
     def decide(self, t, position):
         """The action to do now, or None to idle: among actions with P >= threshold, the highest U = P / C, ties by name."""

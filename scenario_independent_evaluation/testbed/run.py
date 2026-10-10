@@ -39,15 +39,15 @@ def run(scenario, goal, log_file):
     am = scenario.awareness_manager()
     am.set_goal(goal)
     executor = Executor(scenario.WORLD_FILE)
-    parameters = scenario.parameters()
+    settings = scenario.testbed()
 
-    position = parameters['start_position']
+    position = settings['start_position']
     action, ends, idle = None, None, False
     log_file.parent.mkdir(exist_ok=True)
     log = open(log_file, 'w', newline='')
     writer = csv.writer(log)
     writer.writerow(log_header(am))
-    for t in range(parameters['run_length'] + 1):
+    for t in range(settings['run_length'] + 1):
         if action is not None and t >= ends:
             am.observe(executor.execute(*action, am.observes(action)), t)
             position = action[1]

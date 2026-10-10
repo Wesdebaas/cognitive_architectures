@@ -31,7 +31,14 @@ def knowledge():
 
 
 def parameters():
+    """The awareness manager's parameters."""
     with open(HERE / 'parameters.yaml') as f:
+        return yaml.safe_load(f)
+
+
+def testbed():
+    """The testbed's settings for a run in this scenario; the awareness manager never sees these."""
+    with open(HERE / 'testbed.yaml') as f:
         return yaml.safe_load(f)
 
 
@@ -53,7 +60,9 @@ def travel_time(start, end):
 
 
 def awareness_manager():
-    return AwarenessManager(knowledge(), located_at=conceptnet.located_at, travel_time=travel_time, parameters=parameters())
+    # This robot drives, so its transition cost is travel time; ConceptNet's AtLocation is the association source.
+    return AwarenessManager(knowledge(), association=conceptnet.located_at, transition_cost=travel_time,
+                            parameters=parameters())
 
 
 if __name__ == '__main__':
