@@ -1,6 +1,6 @@
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 @prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
-@prefix am:   <http://cognitive-nav.org/awareness-manager#> .
+@prefix am:   <http://example.org/awareness-manager#> .
 
 
 # The word a thing is known by in the commonsense source.

@@ -1,4 +1,4 @@
-@prefix am: <http://cognitive-nav.org/awareness-manager#> .
+@prefix am: <http://example.org/awareness-manager#> .
 
 # The true state of the world. Only an inspection may read this file.
 am:juice am:isAt am:refrigerator_1 .

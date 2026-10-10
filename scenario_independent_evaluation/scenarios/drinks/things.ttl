@@ -1,4 +1,4 @@
-@prefix am: <http://cognitive-nav.org/awareness-manager#> .
+@prefix am: <http://example.org/awareness-manager#> .
 
 
 # The places where the robot can look.

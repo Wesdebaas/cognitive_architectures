@@ -1,5 +1,5 @@
 @prefix dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#> .
-@prefix am:  <http://cognitive-nav.org/awareness-manager#> .
+@prefix am:  <http://example.org/awareness-manager#> .
 
 
 am:serve_guests a dul:Goal ;

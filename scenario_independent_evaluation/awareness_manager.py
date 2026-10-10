@@ -9,7 +9,7 @@ import math
 
 import pyoxigraph as ox
 
-AM = 'http://cognitive-nav.org/awareness-manager#'
+AM = 'http://example.org/awareness-manager#'
 
 
 def short(term):
