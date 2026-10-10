@@ -1,0 +1,5 @@
+@prefix cn: <http://cognitive-nav.org/ontology#> .
+
+# The true state of the world. Only an inspection may read this file.
+cn:juice cn:isAt cn:refrigerator_1 .
+cn:wine  cn:isAt cn:bar_1 .

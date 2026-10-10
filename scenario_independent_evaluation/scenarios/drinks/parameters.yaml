@@ -1,0 +1,12 @@
+# Seconds an inspection takes once the robot is at the place.
+look_time: 5
+
+# Seconds after which a belief about this item type is 63% stale (E = 1 - e^(-dt/mu)).
+# Hand-set for now. Ideally learned from observations, like the Toris paper.
+mu:
+  juice: 120
+  wine: 300
+
+# Only inspections with P at or above this value are considered; none -> the robot idles.
+# Must stay below the smallest A that should ever be checked, or that belief is never rechecked.
+idle_threshold: 0.2
