@@ -1,22 +1,22 @@
-@prefix cn: <http://cognitive-nav.org/ontology#> .
+@prefix am: <http://cognitive-nav.org/awareness-manager#> .
 
 
 # The places where the robot can look.
-cn:refrigerator_1 a cn:Place .
-cn:bar_1          a cn:Place .
-cn:dishwasher_1   a cn:Place .
-cn:oven_1         a cn:Place .
-cn:drawer_1       a cn:Place .
-cn:sink_1         a cn:Place .
-cn:table_1        a cn:Place .
-cn:trash_can_1    a cn:Place .
+am:refrigerator_1 a am:Place .
+am:bar_1          a am:Place .
+am:dishwasher_1   a am:Place .
+am:oven_1         a am:Place .
+am:drawer_1       a am:Place .
+am:sink_1         a am:Place .
+am:table_1        a am:Place .
+am:trash_can_1    a am:Place .
 
 # The items in the scenario.
-cn:juice  a cn:Item .
-cn:wine   a cn:Item .
-cn:milk   a cn:Item .
-cn:bread  a cn:Item .
-cn:plate  a cn:Item .
-cn:cup    a cn:Item .
-cn:knife  a cn:Item .
-cn:cereal a cn:Item .
+am:juice  a am:Item .
+am:wine   a am:Item .
+am:milk   a am:Item .
+am:bread  a am:Item .
+am:plate  a am:Item .
+am:cup    a am:Item .
+am:knife  a am:Item .
+am:cereal a am:Item .

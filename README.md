@@ -127,5 +127,5 @@ java -jar ~/tools/robot/robot.jar merge \
   --catalog ~/ros2_ws/src/soma/owl/catalog-v001.xml \
   --input   ~/ros2_ws/src/soma/owl/SOMA-HOME.owl \
   convert --format ttl \
-  --output  ~/ros2_ws/src/cognitive_architectures/scenario_independent_evaluation/ontologies/soma-home-2.1.0.ttl
+  --output  ~/ros2_ws/src/cognitive_architectures/scenario_independent_evaluation/sources/soma-home-2.1.0.ttl
 ```

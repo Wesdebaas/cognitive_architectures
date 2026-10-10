@@ -13,10 +13,10 @@ from pathlib import Path
 import graph
 
 scenario, goal = sys.argv[1], sys.argv[2]
-store = graph.load(scenario)
-kinds = graph.kinds(store)
+am = graph.load_scenario(scenario).awareness_manager()
+kinds = graph.kinds(am.knowledge)
 for number, build in [(1, graph.graph_1), (2, graph.graph_2), (3, graph.graph_3), (4, graph.graph_4)]:
-    nodes, edges = build(store, goal)
+    nodes, edges = build(am, goal)
     soma_classes = {end for start, label, end in edges if label == 'a'}
     lines = ['digraph {', '  node [style=filled];']
     for node in sorted(nodes):

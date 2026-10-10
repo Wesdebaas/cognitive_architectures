@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pyoxigraph as ox
 
-SOMA_FILE = Path(__file__).resolve().parents[1] / 'ontologies' / 'soma-home-2.1.0.ttl'
+SOMA_FILE = Path(__file__).resolve().parent / 'soma-home-2.1.0.ttl'
 PREFIXES = '''
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX SOMA: <http://www.ease-crc.org/ont/SOMA.owl#>

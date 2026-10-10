@@ -1,5 +1,5 @@
-@prefix cn: <http://cognitive-nav.org/ontology#> .
+@prefix am: <http://cognitive-nav.org/awareness-manager#> .
 
 # The true state of the world. Only an inspection may read this file.
-cn:juice cn:isAt cn:refrigerator_1 .
-cn:wine  cn:isAt cn:bar_1 .
+am:juice am:isAt am:refrigerator_1 .
+am:wine  am:isAt am:bar_1 .

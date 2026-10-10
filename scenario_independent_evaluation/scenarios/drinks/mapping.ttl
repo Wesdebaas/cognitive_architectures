@@ -1,58 +1,58 @@
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 @prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
-@prefix cn:   <http://cognitive-nav.org/ontology#> .
+@prefix am:   <http://cognitive-nav.org/awareness-manager#> .
 
 
-# The word a thing is known by in ConceptNet 5.7.0.
-cn:conceptnetWord a owl:DatatypeProperty .
+# The word a thing is known by in the commonsense source.
+am:word a owl:DatatypeProperty .
 
 
 # The things in this scenario.
 
-cn:juice a SOMA:Bottle ;                 # SOMA has no juice container
-    cn:conceptnetWord "juice" .
+am:juice a SOMA:Bottle ;                 # SOMA has no juice container
+    am:word "juice" .
 
-cn:wine a SOMA:WineBottle ;
-    cn:conceptnetWord "wine" .
+am:wine a SOMA:WineBottle ;
+    am:word "wine" .
 
-cn:milk a SOMA:MilkBottle ;
-    cn:conceptnetWord "milk" .
+am:milk a SOMA:MilkBottle ;
+    am:word "milk" .
 
-cn:bread a SOMA:Bread ;
-    cn:conceptnetWord "bread" .
+am:bread a SOMA:Bread ;
+    am:word "bread" .
 
-cn:plate a SOMA:Plate ;
-    cn:conceptnetWord "plate" .
+am:plate a SOMA:Plate ;
+    am:word "plate" .
 
-cn:cup a SOMA:Cup ;
-    cn:conceptnetWord "cup" .
+am:cup a SOMA:Cup ;
+    am:word "cup" .
 
-cn:knife a SOMA:Knife ;
-    cn:conceptnetWord "knife" .
+am:knife a SOMA:Knife ;
+    am:word "knife" .
 
-cn:cereal a SOMA:CerealBox ;
-    cn:conceptnetWord "cereal" .
+am:cereal a SOMA:CerealBox ;
+    am:word "cereal" .
 
-cn:refrigerator_1 a SOMA:Refrigerator ;
-    cn:conceptnetWord "refrigerator" .
+am:refrigerator_1 a SOMA:Refrigerator ;
+    am:word "refrigerator" .
 
-cn:bar_1 a SOMA:Cupboard ;                 # SOMA has no bar
-    cn:conceptnetWord "bar" .
+am:bar_1 a SOMA:Cupboard ;                 # SOMA has no bar
+    am:word "bar" .
 
-cn:dishwasher_1 a SOMA:Dishwasher ;
-    cn:conceptnetWord "dishwasher" .
+am:dishwasher_1 a SOMA:Dishwasher ;
+    am:word "dishwasher" .
 
-cn:oven_1 a SOMA:Oven ;
-    cn:conceptnetWord "oven" .
+am:oven_1 a SOMA:Oven ;
+    am:word "oven" .
 
-cn:drawer_1 a SOMA:Drawer ;
-    cn:conceptnetWord "drawer" .
+am:drawer_1 a SOMA:Drawer ;
+    am:word "drawer" .
 
-cn:sink_1 a SOMA:Sink ;
-    cn:conceptnetWord "sink" .
+am:sink_1 a SOMA:Sink ;
+    am:word "sink" .
 
-cn:table_1 a SOMA:Table ;
-    cn:conceptnetWord "table" .
+am:table_1 a SOMA:Table ;
+    am:word "table" .
 
-cn:trash_can_1 a SOMA:TrashContainer ;
-    cn:conceptnetWord "trash_can" .
+am:trash_can_1 a SOMA:TrashContainer ;
+    am:word "trash_can" .

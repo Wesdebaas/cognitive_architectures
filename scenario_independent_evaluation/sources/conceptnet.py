@@ -6,7 +6,7 @@ Run:  python3 conceptnet.py juice wine
 import sys
 from pathlib import Path
 
-CONCEPTNET_FILE = Path(__file__).resolve().parents[1] / 'conceptnet' / 'conceptnet-5.7.0-selected.tsv'
+CONCEPTNET_FILE = Path(__file__).resolve().parent / 'conceptnet-5.7.0-selected.tsv'
 
 
 def word_of(node):
@@ -23,6 +23,11 @@ def edges(word, path=CONCEPTNET_FILE):
             if word_of(start) == word or word_of(end) == word:
                 found.append((relation, word_of(start), word_of(end), float(weight)))
     return found
+
+
+def located_at(word):
+    """Where ConceptNet says the thing a word names is: [(place word, weight)], from AtLocation edges starting at the word."""
+    return [(end, weight) for relation, start, end, weight in edges(word) if relation == '/r/AtLocation' and start == word]
 
 
 if __name__ == '__main__':
