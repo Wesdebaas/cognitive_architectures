@@ -6,10 +6,12 @@ Run:  python3 scenario.py <goal>        (prints the beliefs and actions the goal
 python3 scenario.py serve_guests
 """
 
+import csv
 import sys
 from pathlib import Path
 
 import pyoxigraph as ox
+import yaml
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]))
@@ -17,6 +19,7 @@ from awareness_manager import AwarenessManager
 from sources import conceptnet, soma
 
 KNOWLEDGE_FILES = ['goals.ttl', 'mapping.ttl', 'things.ttl', 'actions.ttl']
+WORLD_FILE = HERE / 'world.ttl'   # for the testbed's executor only, never for the awareness manager
 
 
 def knowledge():
@@ -27,8 +30,30 @@ def knowledge():
     return store
 
 
+def parameters():
+    with open(HERE / 'parameters.yaml') as f:
+        return yaml.safe_load(f)
+
+
+def travel_times():
+    """{(from, to): seconds}, each row read both ways."""
+    times = {}
+    with open(HERE / 'travel_times.csv') as f:
+        for row in csv.DictReader(f):
+            times[(row['from'], row['to'])] = times[(row['to'], row['from'])] = float(row['seconds'])
+    return times
+
+
+TRAVEL_TIMES = travel_times()
+
+
+def travel_time(start, end):
+    """Seconds from start to end: 0 if already there, None if the table has no such pair (unreachable)."""
+    return 0.0 if start == end else TRAVEL_TIMES.get((start, end))
+
+
 def awareness_manager():
-    return AwarenessManager(knowledge(), located_at=conceptnet.located_at)
+    return AwarenessManager(knowledge(), located_at=conceptnet.located_at, travel_time=travel_time, parameters=parameters())
 
 
 if __name__ == '__main__':

@@ -10,3 +10,6 @@ idle_threshold: 0.2
 
 # Seconds one run lasts.
 run_length: 600
+
+# Where the robot is when the run starts.
+start_position: start
