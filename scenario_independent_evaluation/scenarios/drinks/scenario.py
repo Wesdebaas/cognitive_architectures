@@ -2,7 +2,7 @@
 
 The only file where this scenario, SOMA and ConceptNet meet. A new scenario = a new folder with its own scenario.py.
 
-Run:  python3 scenario.py <goal>        (prints the beliefs the goal derives)
+Run:  python3 scenario.py <goal>        (prints the beliefs and actions the goal derives)
 python3 scenario.py serve_guests
 """
 
@@ -16,11 +16,11 @@ sys.path.insert(0, str(HERE.parents[1]))
 from awareness_manager import AwarenessManager
 from sources import conceptnet, soma
 
-KNOWLEDGE_FILES = ['goals.ttl', 'mapping.ttl', 'things.ttl']
+KNOWLEDGE_FILES = ['goals.ttl', 'mapping.ttl', 'things.ttl', 'actions.ttl']
 
 
 def knowledge():
-    """SOMA plus this scenario's goals, mapping and things, in one store."""
+    """SOMA plus this scenario's goals, mapping, things and action types, in one store."""
     store = soma.load_soma()
     for name in KNOWLEDGE_FILES:
         store.load(path=str(HERE / name), format=ox.RdfFormat.TURTLE)
@@ -33,5 +33,9 @@ def awareness_manager():
 
 if __name__ == '__main__':
     goal = sys.argv[1]
-    for belief, a in awareness_manager().beliefs(goal).items():
+    am = awareness_manager()
+    for belief, a in am.beliefs(goal).items():
         print(*belief, f'A = {a:.3f}')
+    print()
+    for (action_type, target), beliefs in am.actions(goal).items():
+        print(action_type, target, beliefs)

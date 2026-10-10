@@ -2,11 +2,12 @@
 @prefix am:   <http://example.org/awareness-manager#> .
 
 
-# What the robot can do. The awareness manager derives one action per instance of appliesTo
-# (subclasses included) and sees nothing about an action beyond these fields.
+# What the robot can do. The awareness manager derives one action per thing that is an instance
+# of EVERY appliesTo class (subclasses included) and sees nothing about an action beyond these fields.
 # How to carry an action out is the executor's business.
 
 am:inspect a am:ActionType ;
-    am:appliesTo     SOMA:DesignedContainer ;   # look inside: sink and table are not containers
+    am:appliesTo     SOMA:DesignedContainer ,   # look inside: sink and table are not containers
+                     am:Place ;                 # bottles, cups and plates are containers too
     am:observesClaim "present" ;
     am:duration      5 .                        # seconds at the target
