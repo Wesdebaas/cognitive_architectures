@@ -9,19 +9,11 @@ python3 run.py ../scenarios/drinks serve_guests
 """
 
 import csv
-import importlib.util
 import sys
 from pathlib import Path
 
 from executor import Executor
-
-
-def load_scenario(folder):
-    """The scenario.py module of a scenario folder."""
-    spec = importlib.util.spec_from_file_location('scenario', Path(folder) / 'scenario.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from load import load_scenario
 
 
 def log_header(am):

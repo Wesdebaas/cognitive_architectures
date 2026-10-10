@@ -1,6 +1,6 @@
 """Draw the graphs for one goal with Graphviz, saved in the scenario folder as <goal>_1.pdf, <goal>_2.pdf, ... No ROS.
 
-Yellow = ConceptNet word, blue = SOMA class, orange = given by the scenario, white = derived belief.
+Yellow = ConceptNet word, blue = SOMA class, orange = given by the scenario, white = derived (belief or action).
 
 Run:  python3 draw.py <scenario folder> <goal>
 python3 draw.py ../../scenarios/drinks serve_guests
@@ -18,11 +18,14 @@ kinds = graph.kinds(am.knowledge)
 for number, build in [(1, graph.graph_1), (2, graph.graph_2), (3, graph.graph_3), (4, graph.graph_4)]:
     nodes, edges = build(am, goal)
     soma_classes = {end for start, label, end in edges if label == 'a'}
+    actions = {end for start, label, end in edges if label == 'observed by'}
     lines = ['digraph {', '  node [style=filled];']
     for node in sorted(nodes):
         name = f'{node}\\n({kinds[node]})' if node in kinds else node
         if ' @ ' in node:
             lines.append(f'  "{node}" [label="{node}\\n(belief)", fillcolor="white"];')
+        elif node in actions:
+            lines.append(f'  "{node}" [label="{node}\\n(action)", fillcolor="white"];')
         elif node.startswith('word:'):
             lines.append(f'  "{node}" [label="{name}", fillcolor="#F0E442"];')
         elif node in soma_classes:

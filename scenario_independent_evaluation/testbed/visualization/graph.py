@@ -3,7 +3,8 @@
 Graph 1: goal -> conditions -> items, plus every place and item in the scenario.
 Graph 2: goal -> conditions -> items, plus each item's ConceptNet word and that word's ConceptNet edges.
 Graph 3: graph 2 pruned to the scenario's own words, linked back to their things.
-Graph 4: graph 3 condensed: each item -> place link becomes a belief with its relevance A.
+Graph 4: graph 3 condensed: each item -> place link becomes a belief with its relevance A,
+         and each belief points at the action that observes it.
 
 Graph 2 and 3 draw ConceptNet itself, so unlike the awareness manager they name it.
 
@@ -11,26 +12,18 @@ Run:  python3 graph.py <scenario folder> <goal>
 python3 graph.py ../../scenarios/drinks serve_guests
 """
 
-import importlib.util
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from awareness_manager import AM, short
 from sources import conceptnet
+from testbed.load import load_scenario
 
 DUL = 'http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#'
 
 # The types that say what kind of thing a node is.
 KINDS = {DUL + 'Goal': 'goal', AM + 'Condition': 'condition', AM + 'Item': 'item type', AM + 'Place': 'place'}
-
-
-def load_scenario(folder):
-    """The scenario.py module of a scenario folder."""
-    spec = importlib.util.spec_from_file_location('scenario', Path(folder) / 'scenario.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def kinds(store):
@@ -97,11 +90,14 @@ def graph_3(am, goal):
 
 
 def graph_4(am, goal):
-    """Goal -> conditions -> items, then item -> belief -> place for every derived belief, with its A."""
+    """Goal -> conditions -> items, then item -> belief -> place for every derived belief, with its A,
+    and belief -> action for the action that observes it (actions observing nothing are left out)."""
     edges = goal_edges(am.knowledge, goal)
     for (item, place, claim), a in am.beliefs(goal).items():
         belief = f'{item} @ {place}'
         edges += [(item, claim, belief), (belief, f'A = {a:.3f}', place)]
+    for (action_type, target), beliefs in am.actions(goal).items():
+        edges += [(f'{item} @ {place}', 'observed by', f'{action_type} {target}') for item, place, claim in beliefs]
     edges = sorted(set(edges))
     return nodes_of(edges), edges
 
