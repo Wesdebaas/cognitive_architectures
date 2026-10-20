@@ -1,7 +1,0 @@
-# Settings for a testbed run in this scenario. Read by testbed/run.py, never by the awareness manager.
-
-# Seconds one run lasts.
-run_length: 600
-
-# Where the robot is when the run starts.
-start_position: start

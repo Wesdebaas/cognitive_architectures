@@ -1,5 +1,0 @@
-@prefix am: <http://example.org/awareness-manager#> .
-
-# The true state of the world. Only the testbed's executor reads this file; the awareness manager never does.
-am:juice am:isAt am:refrigerator_1 .
-am:wine  am:isAt am:bar_1 .
