@@ -6,7 +6,7 @@ gives it everything it uses. No ROS.
                    Each (item, thing) pair becomes a belief about the item at that thing.
   transition_cost  (from, to) -> seconds to get into position for an action at `to`, or None if impossible.
                    Travel time for a driving robot, turning time for a pan-tilt camera, 0 for a fixed sensor.
-  parameters       {'T': {item: seconds until a belief about it is fully stale}, 'idle_threshold': P below which nothing is done, 'c': see support}
+  parameters       {'T': {item: seconds until a belief about it is fully stale}, 'idle_threshold': P below which nothing is done, 'c': see support, 'alpha': see discount}
 
 At run time it is told what was observed (observe) and asked what to do next (decide).
 """
@@ -41,24 +41,62 @@ class AwarenessManager:
     def beliefs(self, goal):
         """{(item, place, claim): A} for every place the association source links to an item the goal needs.
 
-        A = 1 - e^(c*w), w = evidence summed over all edges from the item's word to the place's word.
+        A = discount x (1 - e^(c*w)), w = the votes of the nearest class level that has any.
         """
-        query = f'''SELECT DISTINCT ?item ?word WHERE {{
+        query = f'''SELECT ?item ?class WHERE {{
             <{AM}{goal}> <{AM}requires> ?condition . ?condition <{AM}about> ?item .
-            ?item a ?class . ?class <{AM}word> ?word }}'''
-        items = [(row['word'].value, short(row['item'])) for row in self.knowledge.query(query)]
+            ?item a ?class FILTER(?class != <{AM}Item>) }}'''
+        items = {}
+        for row in self.knowledge.query(query):
+            items.setdefault(short(row['item']), set()).add(row['class'].value)
 
         query = f'SELECT ?place ?word WHERE {{ ?place a <{AM}Place> , ?class . ?class <{AM}word> ?word }}'
         places = [(row['word'].value, short(row['place'])) for row in self.knowledge.query(query)]
 
-        weights = {}
-        for item_word, item in items:
-            for end, weight in self.association(item_word):
+        beliefs = {}
+        for item, classes in items.items():
+            votes, source = self.nearest_evidence(classes, places)
+            trust = self.discount(classes, source)
+            for place, w in votes.items():
+                beliefs[(item, place, 'present')] = trust * support(w, self.parameters['c'])
+        return dict(sorted(beliefs.items()))
+
+    def words(self, classes):
+        """The words on these classes."""
+        values = ' '.join(f'<{cls}>' for cls in classes)
+        query = f'SELECT DISTINCT ?word WHERE {{ VALUES ?class {{ {values} }} ?class <{AM}word> ?word }}'
+        return {row['word'].value for row in self.knowledge.query(query)}
+
+    def parents(self, classes):
+        """The named classes one subClassOf step above these classes."""
+        values = ' '.join(f'<{cls}>' for cls in classes)
+        query = f'SELECT DISTINCT ?parent WHERE {{ VALUES ?class {{ {values} }} ?class <{RDFS}subClassOf> ?parent FILTER isIRI(?parent) }}'
+        return {row['parent'].value for row in self.knowledge.query(query)}
+
+    def votes(self, words, places):
+        """{place: w}: votes summed over every edge from these words to a place's word."""
+        votes = {}
+        for word in words:
+            for end, w in self.association(word):
                 for place_word, place in places:
                     if end == place_word:
-                        belief = (item, place, 'present')
-                        weights[belief] = weights.get(belief, 0.0) + weight
-        return {belief: support(weight, self.parameters['c']) for belief, weight in sorted(weights.items())}
+                        votes[place] = votes.get(place, 0.0) + w
+        return votes
+
+    def nearest_evidence(self, classes, places):
+        """(votes, the classes they came from): climb from the classes, one level at a time, until a level has votes."""
+        level, seen = set(classes), set()
+        while level:
+            votes = self.votes(self.words(level), places)
+            if votes:
+                return votes, level
+            seen |= level
+            level = self.parents(level) - seen
+        return {}, set()
+
+    def discount(self, own, source):
+        """How much votes borrowed from the source classes count for an item of the own classes: 1 - alpha, or 1 if not borrowed."""
+        return 1.0 if source == own else 1 - self.parameters['alpha']
 
     def action_types(self):
         """{action type: (classes it applies to, claim it observes, duration in seconds)}, as declared."""
