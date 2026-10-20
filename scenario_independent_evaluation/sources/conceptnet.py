@@ -25,9 +25,14 @@ def edges(word, path=CONCEPTNET_FILE):
     return found
 
 
+def votes(weight):
+    """ConceptNet's edge weight back to the summed votes it was damped from: w <= 2 stays, else (w/2)^2 + 1."""
+    return weight if weight <= 2 else (weight / 2) ** 2 + 1
+
+
 def located_at(word):
-    """Where ConceptNet says the thing a word names is: [(place word, weight)], from AtLocation edges starting at the word."""
-    return [(end, weight) for relation, start, end, weight in edges(word) if relation == '/r/AtLocation' and start == word]
+    """Where ConceptNet says the thing a word names is: [(place word, votes)], from AtLocation edges starting at the word."""
+    return [(end, votes(weight)) for relation, start, end, weight in edges(word) if relation == '/r/AtLocation' and start == word]
 
 
 if __name__ == '__main__':

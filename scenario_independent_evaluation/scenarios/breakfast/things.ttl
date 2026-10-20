@@ -1,0 +1,13 @@
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+
+# The places where the robot can look.
+am:table_1      a am:Place , SOMA:Table .
+am:cupboard_1   a am:Place , SOMA:Cupboard .
+am:dishwasher_1 a am:Place , SOMA:Dishwasher .
+am:sink_1       a am:Place , SOMA:Sink .
+
+# The items in the scenario.
+am:breakfast_plate a am:Item , SOMA:BreakfastPlate .
+am:cup             a am:Item , SOMA:Cup .

@@ -1,0 +1,16 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+
+# The word a SOMA class is known by in ConceptNet. Written once for SOMA, used by every scenario.
+# Chosen: the class name in ConceptNet's spelling; no synonyms. Only the classes the scenarios use.
+am:word a owl:DatatypeProperty .
+
+SOMA:Plate          am:word "plate" .
+SOMA:BreakfastPlate am:word "breakfast_plate" .
+SOMA:Cup            am:word "cup" .
+SOMA:Table          am:word "table" .
+SOMA:Cupboard       am:word "cupboard" .
+SOMA:Dishwasher     am:word "dishwasher" .
+SOMA:Sink           am:word "sink" .

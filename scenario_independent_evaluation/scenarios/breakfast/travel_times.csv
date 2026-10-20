@@ -1,0 +1,11 @@
+from,to,seconds
+start,table_1,10
+start,cupboard_1,15
+start,dishwasher_1,15
+start,sink_1,15
+table_1,cupboard_1,10
+table_1,dishwasher_1,10
+table_1,sink_1,10
+cupboard_1,dishwasher_1,5
+cupboard_1,sink_1,5
+dishwasher_1,sink_1,5

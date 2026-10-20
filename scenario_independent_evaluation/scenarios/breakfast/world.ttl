@@ -1,0 +1,6 @@
+@prefix am: <http://example.org/awareness-manager#> .
+
+# The true state of the world. Only the testbed's executor reads this file; the awareness manager never does.
+# Chosen: by hand.
+am:breakfast_plate am:isAt am:table_1 .
+am:cup             am:isAt am:dishwasher_1 .

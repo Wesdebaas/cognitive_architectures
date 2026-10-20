@@ -4,6 +4,9 @@ T:
   juice: 120
   wine: 300
 
+# Relevance from w votes: A = 1 - e^(c*w), with c < 0. Chosen: -1, Shafer's own choice.
+c: -1
+
 # Only actions with P at or above this value are considered; none -> the robot idles.
 # Must stay below the smallest A that should ever be checked, or that belief is never rechecked.
 idle_threshold: 0.2

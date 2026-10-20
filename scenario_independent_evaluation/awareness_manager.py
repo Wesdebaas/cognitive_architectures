@@ -2,11 +2,11 @@
 gives it everything it uses. No ROS.
 
   knowledge        one RDF store: goals, conditions, places, items, their words, action types, and an ontology
-  association      word -> [(word, strength)]: the things a source associates with a word.
+  association      word -> [(word, w)]: the things a source associates with a word, w = weight of evidence (adds up).
                    Each (item, thing) pair becomes a belief about the item at that thing.
   transition_cost  (from, to) -> seconds to get into position for an action at `to`, or None if impossible.
                    Travel time for a driving robot, turning time for a pan-tilt camera, 0 for a fixed sensor.
-  parameters       {'T': {item: seconds until a belief about it is fully stale}, 'idle_threshold': P below which nothing is done}
+  parameters       {'T': {item: seconds until a belief about it is fully stale}, 'idle_threshold': P below which nothing is done, 'c': see support}
 
 At run time it is told what was observed (observe) and asked what to do next (decide).
 """
@@ -25,10 +25,9 @@ def short(term):
     return term.value.split('#')[-1]
 
 
-def hop_factor(weight):
-    """How much relevance crosses one commonsense edge: between 0 and 1, more for heavier edges."""
-    return 1 - math.exp(-weight)
-    # return weight / (1 + weight)
+def support(w, c):
+    """Shafer's degree of support from weight of evidence w: 1 - e^(c*w), c < 0."""
+    return 1 - math.exp(c * w)
 
 
 class AwarenessManager:
@@ -42,14 +41,14 @@ class AwarenessManager:
     def beliefs(self, goal):
         """{(item, place, claim): A} for every place the association source links to an item the goal needs.
 
-        A = A(item) x hop factor of the strongest association, with A(item) = 1 because a condition names the item.
+        A = 1 - e^(c*w), w = evidence summed over all edges from the item's word to the place's word.
         """
         query = f'''SELECT DISTINCT ?item ?word WHERE {{
             <{AM}{goal}> <{AM}requires> ?condition . ?condition <{AM}about> ?item .
-            ?item <{AM}word> ?word }}'''
+            ?item a ?class . ?class <{AM}word> ?word }}'''
         items = [(row['word'].value, short(row['item'])) for row in self.knowledge.query(query)]
 
-        query = f'SELECT ?place ?word WHERE {{ ?place a <{AM}Place> ; <{AM}word> ?word }}'
+        query = f'SELECT ?place ?word WHERE {{ ?place a <{AM}Place> , ?class . ?class <{AM}word> ?word }}'
         places = [(row['word'].value, short(row['place'])) for row in self.knowledge.query(query)]
 
         weights = {}
@@ -58,8 +57,8 @@ class AwarenessManager:
                 for place_word, place in places:
                     if end == place_word:
                         belief = (item, place, 'present')
-                        weights[belief] = max(weight, weights.get(belief, 0.0))
-        return {belief: hop_factor(weight) for belief, weight in sorted(weights.items())}
+                        weights[belief] = weights.get(belief, 0.0) + weight
+        return {belief: support(weight, self.parameters['c']) for belief, weight in sorted(weights.items())}
 
     def action_types(self):
         """{action type: (classes it applies to, claim it observes, duration in seconds)}, as declared."""
