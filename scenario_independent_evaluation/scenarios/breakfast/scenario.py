@@ -63,9 +63,10 @@ def travel_time(start, end):
 
 
 def awareness_manager():
-    # This robot drives, so its transition cost is travel time; ConceptNet's AtLocation is the association source.
-    return AwarenessManager(knowledge(), association=conceptnet.located_at, transition_cost=travel_time,
-                            parameters=parameters())
+    # This robot drives, so its transition cost is travel time. ConceptNet's AtLocation is the association source;
+    # its beliefs claim that the item is present at the place.
+    return AwarenessManager(knowledge(), association=conceptnet.located_at, claim='present',
+                            transition_cost=travel_time, parameters=parameters())
 
 
 if __name__ == '__main__':

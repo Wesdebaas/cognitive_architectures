@@ -1,7 +1,7 @@
 """Run the awareness manager in the testbed's world on a 1-second clock, printing every decision. No ROS.
 
 Each tick: first the world changes if an event is due; then, if the running action has ended, the executor
-reports what it saw (the world at the end of the action) and the awareness manager observes it; then, if the
+reports what it saw (the world at the end of the action) and the awareness manager stores it; then, if the
 robot is free, the awareness manager decides. Actions are never interrupted.
 After that, where each item really is, E of every belief and P, C, U of every action are logged:
 runs/<scenario>_<goal>.csv, one row per tick.
@@ -63,7 +63,9 @@ def run(scenario, goal, log_file):
             print(f'{t:>4}  world: {item} -> {place or "no place"}')
 
         if action is not None and t >= ends:
-            am.observe(executor.execute(*action, am.observes(action)), t)
+            am.observe(action, executor.execute(*action), t)
+            for _, item, place, claim, value in [s for s in am.unused_sightings() if s[0] == t]:
+                print(f'{t:>4}  reported without a belief: {item} {claim} = {value} at {place}')
             position = action[1]
             action = None
 
@@ -81,6 +83,7 @@ def run(scenario, goal, log_file):
 
         writer.writerow(log_row(am, executor, t, position, action))
     log.close()
+    print(f'unused sightings: {len(am.unused_sightings())}')
     print(f'log: {log_file}')
 
 

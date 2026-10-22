@@ -3,8 +3,8 @@
 The only code that reads the world files. The awareness manager never imports this: a real robot can replace it.
 The world starts as the world file says; the events file (optional) moves items during a run.
 
-Run:  python3 executor.py <world file> <action type> <target> <item> ...     (the world at t = 0)
-python3 executor.py ../scenarios/breakfast/world.ttl inspect table_1 breakfast_plate_1 cup_1
+Run:  python3 executor.py <world file> <action type> <target>     (the world at t = 0)
+python3 executor.py ../scenarios/breakfast/world.ttl inspect table_1
 """
 
 import csv
@@ -48,22 +48,20 @@ class Executor:
                   for row in self.world.query(f'SELECT ?place WHERE {{ <{AM}{item}> <{AM}isAt> ?place }}')]
         return ' '.join(sorted(places))
 
-    def execute(self, action_type, target, beliefs):
-        """{belief: True or False} for every belief the action observes."""
+    def execute(self, action_type, target):
+        """{item: value of the action's claim} for the items the action assessed at the target."""
         if action_type == 'inspect':
-            return {belief: self.inspect(target, belief) for belief in beliefs}
+            return self.inspect(target)
         raise ValueError(f'the executor cannot do {action_type}')
 
-    def inspect(self, target, belief):
-        """Look inside the target: is the belief's item there? Perfect perception."""
-        item, place, claim = belief
-        if claim != 'present':
-            raise ValueError(f'inspect cannot observe {claim}')
-        return bool(self.world.query(f'ASK {{ <{AM}{item}> <{AM}isAt> <{AM}{target}> }}'))
+    def inspect(self, target):
+        """Look at the target: {item: True} for every item that is there. Perfect perception: nothing missed,
+        nothing invented; the action type is declared complete, so an item not reported is not there."""
+        rows = self.world.query(f'SELECT ?item WHERE {{ ?item <{AM}isAt> <{AM}{target}> }}')
+        return {row['item'].value.split('#')[-1]: True for row in rows}
 
 
 if __name__ == '__main__':
-    world_file, action_type, target, items = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:]
-    beliefs = [(item, target, 'present') for item in items]
-    for belief, seen in Executor(world_file).execute(action_type, target, beliefs).items():
-        print(*belief, 'yes' if seen else 'no')
+    world_file, action_type, target = sys.argv[1], sys.argv[2], sys.argv[3]
+    for item, value in sorted(Executor(world_file).execute(action_type, target).items()):
+        print(item, value)

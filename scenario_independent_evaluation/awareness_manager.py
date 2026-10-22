@@ -4,12 +4,18 @@ gives it everything it uses. No ROS.
   knowledge        one RDF store: goals, conditions, places, items, their words, action types, and an ontology
   association      word -> [(word, w)]: the things a source associates with a word, w = weight of evidence (adds up).
                    Each (item, thing) pair becomes a belief about the item at that thing.
+  claim            what such a belief claims about the item at the thing (for an AtLocation source: "present");
+                   an action type observes the beliefs whose claim it declares.
   transition_cost  (from, to) -> seconds to get into position for an action at `to`, or None if impossible.
                    Travel time for a driving robot, turning time for a pan-tilt camera, 0 for a fixed sensor.
   parameters       {'T': {item: seconds until a belief about it is fully stale}, 'idle_threshold': P below which nothing is done, 'c': see support, 'alpha': see discount}
 
 Every goal's beliefs are derived once (prepare). At run time it is told which goal is active (set_goal) and what
-was observed (observe), and asked what to do next (decide). A goal switch keeps every observation.
+an action reported at its target (observe), and asked what to do next (decide). A goal switch keeps every observation.
+
+Observations are stored apart from beliefs: what was seen is a fact about the world, a belief is a hypothesis. An action
+reports a value of its claim for the items it assessed at its target. An action type declared complete assesses every
+item there: an item it did not report has the claim false (looking in a cupboard: what is not seen is not there).
 """
 
 import math
@@ -33,9 +39,10 @@ def support(w, c):
 
 class AwarenessManager:
 
-    def __init__(self, knowledge, association, transition_cost, parameters):
+    def __init__(self, knowledge, association, claim, transition_cost, parameters):
         self.knowledge = knowledge
         self.association = association
+        self.claim = claim
         self.transition_cost = transition_cost
         self.parameters = parameters
 
@@ -50,7 +57,7 @@ class AwarenessManager:
             votes, source = self.nearest_evidence(classes, places)
             trust = self.discount(classes, source)
             for place, w in votes.items():
-                beliefs[(item, place, 'present')] = trust * support(w, self.parameters['c'])
+                beliefs[(item, place, self.claim)] = trust * support(w, self.parameters['c'])
         return dict(sorted(beliefs.items()))
 
     def goals(self):
@@ -111,13 +118,15 @@ class AwarenessManager:
         return 1.0 if source == own else 1 - self.parameters['alpha']
 
     def action_types(self):
-        """{action type: (classes it applies to, claim it observes, duration in seconds)}, as declared."""
-        query = f'''SELECT ?type ?class ?claim ?duration WHERE {{
-            ?type a <{AM}ActionType> ; <{AM}appliesTo> ?class ; <{AM}observesClaim> ?claim ; <{AM}duration> ?duration }}'''
+        """{action type: (classes it applies to, claim it observes, duration in seconds, complete)}, as declared."""
+        query = f'''SELECT ?type ?class ?claim ?duration ?complete WHERE {{
+            ?type a <{AM}ActionType> ; <{AM}appliesTo> ?class ; <{AM}observesClaim> ?claim ; <{AM}duration> ?duration ;
+                  <{AM}complete> ?complete }}'''
         types = {}
         for row in self.knowledge.query(query):
-            classes, claim, duration = types.get(short(row['type']), (set(), row['claim'].value, float(row['duration'].value)))
-            types[short(row['type'])] = (classes | {row['class'].value}, claim, duration)
+            classes, claim, duration, complete = types.get(short(row['type']), (
+                set(), row['claim'].value, float(row['duration'].value), row['complete'].value == 'true'))
+            types[short(row['type'])] = (classes | {row['class'].value}, claim, duration, complete)
         return types
 
     def instances(self, cls):
@@ -134,7 +143,7 @@ class AwarenessManager:
         its type applies to; it observes the beliefs whose place is the target and whose claim is the one the type observes.
         """
         actions = {}
-        for action_type, (classes, claim, duration) in sorted(self.action_types().items()):
+        for action_type, (classes, claim, duration, complete) in sorted(self.action_types().items()):
             targets = set.intersection(*(self.instances(cls) for cls in classes))
             for target in sorted(targets):
                 actions[(action_type, target)] = [b for b in beliefs if b[1] == target and b[2] == claim]
@@ -153,10 +162,9 @@ class AwarenessManager:
             self.a.update(beliefs)
             self.goal_beliefs[goal] = set(beliefs)
         self.b = self.observed_by(self.a)   # every belief at the target, of any goal
-        self.durations = {action_type: duration for action_type, (classes, claim, duration) in self.action_types().items()}
+        self.types = self.action_types()
         self.goal = None
-        self.last_seen = {}   # belief -> time of its last observation
-        self.values = {}      # belief -> what that observation said
+        self.snapshots = {}   # (place, claim) -> [(t, {item: value}, complete)], oldest first
 
     def set_goal(self, goal):
         """Make this goal the active one. Observations are kept: what was seen for one goal counts for the next."""
@@ -164,22 +172,45 @@ class AwarenessManager:
             raise ValueError(f'unknown goal {goal}')
         self.goal = goal
 
-    def observe(self, results, t):
-        """Store what an action saw: {belief: True or False}, observed at time t."""
-        for belief, value in results.items():
-            self.last_seen[belief] = t
-            self.values[belief] = value
+    def observe(self, action, values, t):
+        """Store what an action reported at time t: {item: value of its claim} for the items it assessed at its target."""
+        action_type, target = action
+        classes, claim, duration, complete = self.types[action_type]
+        self.snapshots.setdefault((target, claim), []).append((t, dict(values), complete))
 
-    def observes(self, action):
-        """The beliefs an action answers: every belief at its target, of any goal."""
-        return self.b[action]
+    def last_observation(self, belief):
+        """(t, value) of the last observation that assessed the belief's item at its place, or None if there was none.
+
+        An item a complete action did not report has the claim false; an incomplete action says nothing about it.
+        """
+        item, place, claim = belief
+        for t, values, complete in reversed(self.snapshots.get((place, claim), [])):
+            if item in values:
+                return t, values[item]
+            if complete:
+                return t, False
+        return None
+
+    def seen(self, belief):
+        """What the last observation said about the belief: True, False, or None if never observed."""
+        observation = self.last_observation(belief)
+        return None if observation is None else observation[1]
+
+    def unused_sightings(self):
+        """[(t, item, place, claim, value)]: everything reported for which the awareness manager has no belief.
+        Not used in v1."""
+        return sorted((t, item, place, claim, value)
+                      for (place, claim), history in self.snapshots.items()
+                      for t, values, complete in history
+                      for item, value in values.items() if (item, place, claim) not in self.a)
 
     def e(self, belief, t):
         """Staleness, linear: 0 just after an observation, 1 after T seconds or if never observed."""
-        if belief not in self.last_seen:
+        observation = self.last_observation(belief)
+        if observation is None:
             return 1.0
         item = belief[0]
-        return min(1.0, (t - self.last_seen[belief]) / self.parameters['T'][item])
+        return min(1.0, (t - observation[0]) / self.parameters['T'][item])
 
     def p(self, action, t):
         """Priority: sum of E x A over B(o), the active goal's beliefs the action observes. 0 if no goal is active."""
@@ -191,8 +222,9 @@ class AwarenessManager:
     def cost(self, action, position):
         """C in seconds: the transition to the target plus the action's duration. None if the target is unreachable."""
         action_type, target = action
+        classes, claim, duration, complete = self.types[action_type]
         transition = self.transition_cost(position, target)
-        return None if transition is None else transition + self.durations[action_type]
+        return None if transition is None else transition + duration
 
     def decide(self, t, position):
         """The action to do now, or None to idle: among actions with P >= threshold, the highest U = P / C, ties by name.

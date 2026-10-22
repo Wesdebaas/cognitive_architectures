@@ -8,4 +8,5 @@
 am:inspect a am:ActionType ;
     am:appliesTo     am:Place ;                 # look at the place: a table or sink is not a container
     am:observesClaim "present" ;
-    am:duration      5 .                        # seconds at the target. Chosen: hand-set
+    am:duration      5 ;                        # seconds at the target. Chosen: hand-set
+    am:complete      true .                     # every item at the target is seen: what is not seen is not there
