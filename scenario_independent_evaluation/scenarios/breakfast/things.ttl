@@ -9,5 +9,5 @@ am:dishwasher_1 a am:Place , SOMA:Dishwasher .
 am:sink_1       a am:Place , SOMA:Sink .
 
 # The items in the scenario.
-am:breakfast_plate a am:Item , SOMA:BreakfastPlate .
-am:cup             a am:Item , SOMA:Cup .
+am:breakfast_plate_1 a am:Item , SOMA:BreakfastPlate .
+am:cup_1             a am:Item , SOMA:Cup .

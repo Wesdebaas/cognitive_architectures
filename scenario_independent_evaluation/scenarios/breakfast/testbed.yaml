@@ -1,6 +1,6 @@
 # Settings for a testbed run in this scenario. Read by testbed/run.py, never by the awareness manager.
 
-# Seconds one run lasts. Chosen: as in the drinks scenario.
+# Seconds one run lasts. Chosen: 600.
 run_length: 600
 
 # Where the robot is when the run starts.

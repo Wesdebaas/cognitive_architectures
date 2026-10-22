@@ -3,7 +3,7 @@
 The only code that reads the world file. The awareness manager never imports this: a real robot can replace it.
 
 Run:  python3 executor.py <world file> <action type> <target> <item> ...
-python3 executor.py ../scenarios/drinks/world.ttl inspect refrigerator_1 juice wine
+python3 executor.py ../scenarios/breakfast/world.ttl inspect table_1 breakfast_plate cup
 """
 
 import sys

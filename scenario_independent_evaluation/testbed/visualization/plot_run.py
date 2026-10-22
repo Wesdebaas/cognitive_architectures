@@ -1,7 +1,7 @@
 """Plot a run log: P of every action, with the idle threshold. No ROS.
 
 Run:  python3 plot_run.py <log csv> <idle threshold> [last second to show]
-python3 plot_run.py ../runs/drinks_serve_guests.csv 0.2
+python3 plot_run.py ../runs/breakfast_set_table.csv 0.2
 """
 
 import csv

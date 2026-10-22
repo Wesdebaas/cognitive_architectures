@@ -2,5 +2,5 @@
 
 # The true state of the world. Only the testbed's executor reads this file; the awareness manager never does.
 # Chosen: by hand.
-am:breakfast_plate am:isAt am:table_1 .
-am:cup             am:isAt am:dishwasher_1 .
+am:breakfast_plate_1 am:isAt am:table_1 .
+am:cup_1             am:isAt am:dishwasher_1 .

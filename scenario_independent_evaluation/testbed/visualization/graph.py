@@ -1,15 +1,16 @@
 """The graphs for one goal, each as (nodes, edges), edges being (from, label, to). No ROS.
 
 Graph 1: goal -> conditions -> items, plus every place and item in the scenario.
-Graph 2: goal -> conditions -> items, plus each item's ConceptNet word and that word's ConceptNet edges.
-Graph 3: graph 2 pruned to the scenario's own words, linked back to their things.
+Graph 2: goal -> conditions -> items, plus each item's class (up to where its votes come from),
+         the classes' ConceptNet words and those words' ConceptNet edges.
+Graph 3: graph 2 pruned to the scenario's own words, linked back to their things through their classes.
 Graph 4: graph 3 condensed: each item -> place link becomes a belief with its relevance A,
          and each belief points at the action that observes it.
 
 Graph 2 and 3 draw ConceptNet itself, so unlike the awareness manager they name it.
 
 Run:  python3 graph.py <scenario folder> <goal>
-python3 graph.py ../../scenarios/drinks serve_guests
+python3 graph.py ../../scenarios/breakfast set_table
 """
 
 import sys
@@ -54,16 +55,34 @@ def graph_1(am, goal):
     return nodes_of(edges) | things, edges
 
 
+def name(iri):
+    return iri.split('#')[-1]
+
+
+def class_edges(am, classes, places):
+    """From an item's own classes up to the classes its votes come from (see nearest_evidence):
+    class -> word for every class on the way, class -> parent for every step up."""
+    votes, source = am.nearest_evidence(classes, places)
+    edges, level, seen = [], set(classes), set()
+    while level:
+        edges += [(name(cls), 'word', f'word:{word}') for cls in level for word in am.words({cls})]
+        if not source or level == source:
+            break
+        seen |= level
+        edges += [(name(cls), 'subClassOf', name(parent)) for cls in level for parent in am.parents({cls}) - seen]
+        level = am.parents(level) - seen
+    return edges
+
+
 def graph_2(am, goal):
-    """Goal -> conditions -> items, plus each item's ConceptNet word and that word's ConceptNet edges."""
-    store = am.knowledge
-    edges = goal_edges(store, goal)
-    query = f'''SELECT DISTINCT ?item ?word WHERE {{
-        <{AM}{goal}> <{AM}requires> ?condition . ?condition <{AM}about> ?item .
-        ?item <{AM}word> ?word }}'''
-    for row in store.query(query):
-        item, word = short(row['item']), row['word'].value
-        edges.append((item, 'word', f'word:{word}'))
+    """Goal -> conditions -> items, each item -> its class, up to the class its votes come from,
+    each class -> its ConceptNet word, plus that word's ConceptNet edges."""
+    edges = goal_edges(am.knowledge, goal)
+    places = am.places()
+    for item, classes in am.items(goal).items():
+        edges += [(item, 'a', name(cls)) for cls in classes]
+        edges += class_edges(am, classes, places)
+    for word in {end[len('word:'):] for start, label, end in edges if label == 'word'}:
         edges += [(f'word:{start}', f'{relation} {weight}', f'word:{end}') for relation, start, end, weight in conceptnet.edges(word)]
     edges = sorted(set(edges))
     return nodes_of(edges), edges
@@ -71,20 +90,19 @@ def graph_2(am, goal):
 
 def graph_3(am, goal):
     """Graph 2 keeping only ConceptNet edges between words of things in the scenario,
-    each word linked back to its thing."""
-    store = am.knowledge
-    query = f'SELECT ?word ?thing WHERE {{ ?thing <{AM}word> ?word }}'
-    things = [(f'word:{row["word"].value}', short(row['thing'])) for row in store.query(query)]
-    words = {word for word, thing in things}
+    each place word linked back to its place through the place's class."""
+    query = f'SELECT ?place ?class ?word WHERE {{ ?place a <{AM}Place> , ?class . ?class <{AM}word> ?word }}'
+    places = [(short(row['place']), short(row['class']), f'word:{row["word"].value}') for row in am.knowledge.query(query)]
 
     nodes, edges = graph_2(am, goal)
+    words = {end for start, label, end in edges if label == 'word'} | {word for place, cls, word in places}
     edges = [(start, label, end) for start, label, end in edges
              if not start.startswith('word:') or (start in words and end in words)]
 
     nodes = nodes_of(edges)
-    for word, thing in things:
+    for place, cls, word in places:
         if word in nodes:
-            edges.append((thing, 'word', word))
+            edges += [(place, 'a', cls), (cls, 'word', word)]
     edges = sorted(set(edges))
     return nodes_of(edges), edges
 

@@ -43,23 +43,29 @@ class AwarenessManager:
 
         A = discount x (1 - e^(c*w)), w = the votes of the nearest class level that has any.
         """
+        places = self.places()
+        beliefs = {}
+        for item, classes in self.items(goal).items():
+            votes, source = self.nearest_evidence(classes, places)
+            trust = self.discount(classes, source)
+            for place, w in votes.items():
+                beliefs[(item, place, 'present')] = trust * support(w, self.parameters['c'])
+        return dict(sorted(beliefs.items()))
+
+    def items(self, goal):
+        """{item: its classes} for every item a condition of the goal is about."""
         query = f'''SELECT ?item ?class WHERE {{
             <{AM}{goal}> <{AM}requires> ?condition . ?condition <{AM}about> ?item .
             ?item a ?class FILTER(?class != <{AM}Item>) }}'''
         items = {}
         for row in self.knowledge.query(query):
             items.setdefault(short(row['item']), set()).add(row['class'].value)
+        return items
 
+    def places(self):
+        """[(word, place)] for every place, one pair per word of its class."""
         query = f'SELECT ?place ?word WHERE {{ ?place a <{AM}Place> , ?class . ?class <{AM}word> ?word }}'
-        places = [(row['word'].value, short(row['place'])) for row in self.knowledge.query(query)]
-
-        beliefs = {}
-        for item, classes in items.items():
-            votes, source = self.nearest_evidence(classes, places)
-            trust = self.discount(classes, source)
-            for place, w in votes.items():
-                beliefs[(item, place, 'present')] = trust * support(w, self.parameters['c'])
-        return dict(sorted(beliefs.items()))
+        return [(row['word'].value, short(row['place'])) for row in self.knowledge.query(query)]
 
     def words(self, classes):
         """The words on these classes."""
@@ -73,21 +79,21 @@ class AwarenessManager:
         query = f'SELECT DISTINCT ?parent WHERE {{ VALUES ?class {{ {values} }} ?class <{RDFS}subClassOf> ?parent FILTER isIRI(?parent) }}'
         return {row['parent'].value for row in self.knowledge.query(query)}
 
-    def votes(self, words, places):
+    def evidence(self, words, places):
         """{place: w}: votes summed over every edge from these words to a place's word."""
-        votes = {}
+        evidence = {}
         for word in words:
             for end, w in self.association(word):
                 for place_word, place in places:
                     if end == place_word:
-                        votes[place] = votes.get(place, 0.0) + w
-        return votes
+                        evidence[place] = evidence.get(place, 0.0) + w
+        return evidence
 
     def nearest_evidence(self, classes, places):
         """(votes, the classes they came from): climb from the classes, one level at a time, until a level has votes."""
         level, seen = set(classes), set()
         while level:
-            votes = self.votes(self.words(level), places)
+            votes = self.evidence(self.words(level), places)
             if votes:
                 return votes, level
             seen |= level

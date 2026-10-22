@@ -5,5 +5,5 @@
 am:set_table a dul:Goal ;
     am:requires am:breakfast_plate_present , am:cup_present .
 
-am:breakfast_plate_present a am:Condition ; am:about am:breakfast_plate .
-am:cup_present             a am:Condition ; am:about am:cup .
+am:breakfast_plate_present a am:Condition ; am:about am:breakfast_plate_1 .
+am:cup_present             a am:Condition ; am:about am:cup_1 .

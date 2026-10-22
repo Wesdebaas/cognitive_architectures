@@ -5,7 +5,7 @@ observes it; then, if the robot is free, the awareness manager decides. Actions 
 After that, E of every belief and P, C, U of every action are logged: runs/<scenario>_<goal>.csv, one row per tick.
 
 Run:  python3 run.py <scenario folder> <goal>
-python3 run.py ../scenarios/drinks serve_guests
+python3 run.py ../scenarios/breakfast set_table
 """
 
 import csv

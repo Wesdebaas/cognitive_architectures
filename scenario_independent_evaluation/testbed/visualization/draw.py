@@ -3,7 +3,7 @@
 Yellow = ConceptNet word, blue = SOMA class, orange = given by the scenario, white = derived (belief or action).
 
 Run:  python3 draw.py <scenario folder> <goal>
-python3 draw.py ../../scenarios/drinks serve_guests
+python3 draw.py ../../scenarios/breakfast set_table
 """
 
 import subprocess
@@ -17,7 +17,7 @@ am = graph.load_scenario(scenario).awareness_manager()
 kinds = graph.kinds(am.knowledge)
 for number, build in [(1, graph.graph_1), (2, graph.graph_2), (3, graph.graph_3), (4, graph.graph_4)]:
     nodes, edges = build(am, goal)
-    soma_classes = {end for start, label, end in edges if label == 'a'}
+    soma_classes = {end for start, label, end in edges if label in ('a', 'subClassOf')}
     actions = {end for start, label, end in edges if label == 'observed by'}
     lines = ['digraph {', '  node [style=filled];']
     for node in sorted(nodes):
