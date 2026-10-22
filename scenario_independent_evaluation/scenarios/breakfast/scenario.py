@@ -20,7 +20,8 @@ from sources import conceptnet, soma
 
 KNOWLEDGE_FILES = ['goals.ttl', 'things.ttl', 'actions.ttl']
 WORDS_FILE = HERE.parents[1] / 'sources' / 'soma-conceptnet-words.ttl'
-WORLD_FILE = HERE / 'world.ttl'   # for the testbed's executor only, never for the awareness manager
+WORLD_FILE = HERE / 'world.ttl'                 # for the testbed's executor only, never for the awareness manager
+WORLD_EVENTS_FILE = HERE / 'world_events.csv'   # idem: t,item,place = from time t on, the item is at the place
 
 
 def knowledge():

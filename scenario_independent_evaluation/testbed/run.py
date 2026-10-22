@@ -1,8 +1,10 @@
 """Run the awareness manager in the testbed's world on a 1-second clock, printing every decision. No ROS.
 
-Each tick: if the running action has ended, the executor reports what it saw and the awareness manager
-observes it; then, if the robot is free, the awareness manager decides. Actions are never interrupted.
-After that, E of every belief and P, C, U of every action are logged: runs/<scenario>_<goal>.csv, one row per tick.
+Each tick: first the world changes if an event is due; then, if the running action has ended, the executor
+reports what it saw (the world at the end of the action) and the awareness manager observes it; then, if the
+robot is free, the awareness manager decides. Actions are never interrupted.
+After that, where each item really is, E of every belief and P, C, U of every action are logged:
+runs/<scenario>_<goal>.csv, one row per tick.
 
 Run:  python3 run.py <scenario folder> <goal>
 python3 run.py ../scenarios/breakfast set_table
@@ -16,19 +18,27 @@ from executor import Executor
 from load import load_scenario
 
 
+def log_items(am):
+    """The items the goal has beliefs about."""
+    return sorted({item for item, place, claim in am.a})
+
+
 def log_header(am):
     beliefs, actions = sorted(am.a), sorted(am.b)
     return (['t', 'position', 'running']
+            + [f'at {item}' for item in log_items(am)]
             + [f'E {item}@{place}' for item, place, claim in beliefs]
             + [f'{value} {action_type} {target}' for value in 'PCU' for action_type, target in actions])
 
 
-def log_row(am, t, position, action):
-    """The values the awareness manager sees at time t. C and U are empty for an unreachable target."""
+def log_row(am, executor, t, position, action):
+    """Where each item really is, then the values the awareness manager sees at time t.
+    C and U are empty for an unreachable target."""
     beliefs, actions = sorted(am.a), sorted(am.b)
     p = {o: am.p(o, t) for o in actions}
     c = {o: am.cost(o, position) for o in actions}
     return ([t, position, ' '.join(action) if action else '']
+            + [executor.location(item) for item in log_items(am)]
             + [round(am.e(belief, t), 4) for belief in beliefs]
             + [round(p[o], 4) for o in actions]
             + ['' if c[o] is None else c[o] for o in actions]
@@ -38,7 +48,7 @@ def log_row(am, t, position, action):
 def run(scenario, goal, log_file):
     am = scenario.awareness_manager()
     am.set_goal(goal)
-    executor = Executor(scenario.WORLD_FILE)
+    executor = Executor(scenario.WORLD_FILE, scenario.WORLD_EVENTS_FILE)
     settings = scenario.testbed()
 
     position = settings['start_position']
@@ -48,6 +58,9 @@ def run(scenario, goal, log_file):
     writer = csv.writer(log)
     writer.writerow(log_header(am))
     for t in range(settings['run_length'] + 1):
+        for _, item, place in executor.advance(t):
+            print(f'{t:>4}  world: {item} -> {place or "no place"}')
+
         if action is not None and t >= ends:
             am.observe(executor.execute(*action, am.observes(action)), t)
             position = action[1]
@@ -65,7 +78,7 @@ def run(scenario, goal, log_file):
                 ends = t + c
                 print(f'{t:>4}  at {position:<15} {action[0]} {action[1]:<15} P = {p:.3f}  C = {c:>4g}  U = {p / c:.4f}  ends {ends:g}')
 
-        writer.writerow(log_row(am, t, position, action))
+        writer.writerow(log_row(am, executor, t, position, action))
     log.close()
     print(f'log: {log_file}')
 
