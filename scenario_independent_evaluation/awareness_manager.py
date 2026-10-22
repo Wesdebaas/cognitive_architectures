@@ -8,7 +8,8 @@ gives it everything it uses. No ROS.
                    Travel time for a driving robot, turning time for a pan-tilt camera, 0 for a fixed sensor.
   parameters       {'T': {item: seconds until a belief about it is fully stale}, 'idle_threshold': P below which nothing is done, 'c': see support, 'alpha': see discount}
 
-At run time it is told what was observed (observe) and asked what to do next (decide).
+Every goal's beliefs are derived once (prepare). At run time it is told which goal is active (set_goal) and what
+was observed (observe), and asked what to do next (decide). A goal switch keeps every observation.
 """
 
 import math
@@ -51,6 +52,11 @@ class AwarenessManager:
             for place, w in votes.items():
                 beliefs[(item, place, 'present')] = trust * support(w, self.parameters['c'])
         return dict(sorted(beliefs.items()))
+
+    def goals(self):
+        """Every goal: everything that requires a condition."""
+        query = f'SELECT DISTINCT ?goal WHERE {{ ?goal <{AM}requires> ?condition }}'
+        return sorted(short(row['goal']) for row in self.knowledge.query(query))
 
     def items(self, goal):
         """{item: its classes} for every item a condition of the goal is about."""
@@ -120,11 +126,13 @@ class AwarenessManager:
         return {short(row['thing']) for row in self.knowledge.query(query)}
 
     def actions(self, goal):
-        """{(action type, target): B(o)}: one action per thing that is an instance of every class its type applies to.
+        """{(action type, target): B(o)}: B(o) = the goal's beliefs the action observes."""
+        return self.observed_by(self.beliefs(goal))
 
-        B(o) = the goal's beliefs whose place is the target and whose claim is the one the type observes.
+    def observed_by(self, beliefs):
+        """{(action type, target): the beliefs it observes}: one action per thing that is an instance of every class
+        its type applies to; it observes the beliefs whose place is the target and whose claim is the one the type observes.
         """
-        beliefs = self.beliefs(goal)
         actions = {}
         for action_type, (classes, claim, duration) in sorted(self.action_types().items()):
             targets = set.intersection(*(self.instances(cls) for cls in classes))
@@ -134,13 +142,27 @@ class AwarenessManager:
 
     # ---- run time ----
 
-    def set_goal(self, goal):
-        """Derive the goal's beliefs and actions once (static in v1) and forget all observations."""
-        self.a = self.beliefs(goal)
-        self.b = self.actions(goal)
+    def prepare(self):
+        """Derive every goal's beliefs and every action once (static in v1). No goal is active and nothing is observed yet.
+
+        A belief and its A do not depend on the goal, so one belief can belong to several goals (a shared item).
+        """
+        self.a, self.goal_beliefs = {}, {}
+        for goal in self.goals():
+            beliefs = self.beliefs(goal)
+            self.a.update(beliefs)
+            self.goal_beliefs[goal] = set(beliefs)
+        self.b = self.observed_by(self.a)   # every belief at the target, of any goal
         self.durations = {action_type: duration for action_type, (classes, claim, duration) in self.action_types().items()}
+        self.goal = None
         self.last_seen = {}   # belief -> time of its last observation
         self.values = {}      # belief -> what that observation said
+
+    def set_goal(self, goal):
+        """Make this goal the active one. Observations are kept: what was seen for one goal counts for the next."""
+        if goal not in self.goal_beliefs:
+            raise ValueError(f'unknown goal {goal}')
+        self.goal = goal
 
     def observe(self, results, t):
         """Store what an action saw: {belief: True or False}, observed at time t."""
@@ -149,7 +171,7 @@ class AwarenessManager:
             self.values[belief] = value
 
     def observes(self, action):
-        """B(o): the beliefs an action answers."""
+        """The beliefs an action answers: every belief at its target, of any goal."""
         return self.b[action]
 
     def e(self, belief, t):
@@ -160,8 +182,11 @@ class AwarenessManager:
         return min(1.0, (t - self.last_seen[belief]) / self.parameters['T'][item])
 
     def p(self, action, t):
-        """Priority: sum of E x A over the beliefs the action observes."""
-        return sum(self.e(belief, t) * self.a[belief] for belief in self.b[action])
+        """Priority: sum of E x A over B(o), the active goal's beliefs the action observes. 0 if no goal is active."""
+        if self.goal is None:
+            return 0.0
+        active = self.goal_beliefs[self.goal]
+        return sum(self.e(belief, t) * self.a[belief] for belief in self.b[action] if belief in active)
 
     def cost(self, action, position):
         """C in seconds: the transition to the target plus the action's duration. None if the target is unreachable."""
@@ -170,7 +195,10 @@ class AwarenessManager:
         return None if transition is None else transition + self.durations[action_type]
 
     def decide(self, t, position):
-        """The action to do now, or None to idle: among actions with P >= threshold, the highest U = P / C, ties by name."""
+        """The action to do now, or None to idle: among actions with P >= threshold, the highest U = P / C, ties by name.
+        Idle while no goal is active."""
+        if self.goal is None:
+            return None
         candidates = []
         for action in self.b:
             p, c = self.p(action, t), self.cost(action, position)

@@ -47,6 +47,7 @@ def log_row(am, executor, t, position, action):
 
 def run(scenario, goal, log_file):
     am = scenario.awareness_manager()
+    am.prepare()
     am.set_goal(goal)
     executor = Executor(scenario.WORLD_FILE, scenario.WORLD_EVENTS_FILE)
     settings = scenario.testbed()
