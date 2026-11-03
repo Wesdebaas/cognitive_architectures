@@ -4,7 +4,7 @@ The only code that reads the world files. The awareness manager never imports th
 The world starts as the world file says; the events file (optional) moves items during a run.
 
 Run:  python3 executor.py <world file> <action type> <target>     (the world at t = 0)
-python3 executor.py ../scenarios/breakfast/world.ttl inspect table_1
+python3 executor.py ../scenarios/breakfast/worlds/d14/world.ttl inspect table_1
 """
 
 import csv
