@@ -1,0 +1,6 @@
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+# There is a new cupboard, and a new pan that no goal needs yet.
+am:cupboard_4 a am:Place , SOMA:Cupboard .
+am:pan_1 a am:Item , SOMA:Pan .

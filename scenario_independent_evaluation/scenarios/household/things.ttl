@@ -1,0 +1,26 @@
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+
+# The places where the robot can look, as known at the start of a run.
+am:cupboard_1     a am:Place , SOMA:Cupboard .
+am:cupboard_2     a am:Place , SOMA:Cupboard .
+am:cupboard_3     a am:Place , SOMA:Cupboard .
+am:drawer_1       a am:Place , SOMA:Drawer .
+am:drawer_2       a am:Place , SOMA:Drawer .
+am:countertop_1   a am:Place , SOMA:Countertop .
+am:dishwasher_1   a am:Place , SOMA:Dishwasher .
+am:stove_1        a am:Place , SOMA:Stove .
+am:sink_1         a am:Place , SOMA:Sink .
+am:refrigerator_1 a am:Place , SOMA:Refrigerator .
+am:oven_1         a am:Place , SOMA:Oven .
+am:table_1        a am:Place , SOMA:Table .
+am:coffee_table_1 a am:Place , SOMA:CoffeeTable .
+am:sofa_1         a am:Place , SOMA:Sofa .
+
+# The items in the scenario, as known at the start of a run.
+am:breakfast_plate_1 a am:Item , SOMA:BreakfastPlate .
+am:cup_1             a am:Item , SOMA:Cup .
+am:table_fork_1      a am:Item , SOMA:TableFork .
+am:pasta_bowl_1      a am:Item , SOMA:PastaBowl .
+am:wine_glass_1      a am:Item , SOMA:WineGlass .

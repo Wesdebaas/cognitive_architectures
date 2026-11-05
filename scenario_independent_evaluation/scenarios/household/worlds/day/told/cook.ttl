@@ -1,0 +1,10 @@
+@prefix dul:  <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#> .
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+# A new goal: cooking needs the pan told earlier and a new pot.
+am:pot_1 a am:Item , SOMA:Pot .
+am:pan_present a am:Condition ; am:about am:pan_1 .
+am:pot_present a am:Condition ; am:about am:pot_1 .
+am:cook a dul:Goal ;
+    am:requires am:pan_present , am:pot_present .

@@ -5,6 +5,7 @@ python3 plot_run.py ../runs/breakfast_d14.csv 0.2
 """
 
 import csv
+import itertools
 import sys
 from pathlib import Path
 
@@ -20,7 +21,7 @@ with open(log_file) as f:
 t = [int(row['t']) for row in rows]
 actions = [c for c in rows[0] if c.startswith('P ') and any(float(row[c]) > 0 for row in rows)]
 
-for column, line in zip(actions, ['-', '--', ':']):
+for column, line in zip(actions, itertools.cycle(['-', '--', ':', '-.'])):
     plt.step(t, [float(row[column]) for row in rows], line, where='post', label=column[2:])
 plt.axhline(threshold, color='grey', linestyle=':', label='threshold')
 plt.xlabel('time (s)')

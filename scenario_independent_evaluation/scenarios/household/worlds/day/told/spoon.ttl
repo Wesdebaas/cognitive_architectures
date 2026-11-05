@@ -1,0 +1,7 @@
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+# Lunch also needs a spoon. It has been on the table since the start, so the robot has already seen it.
+am:spoon_1 a am:Item , SOMA:Spoon .
+am:spoon_present a am:Condition ; am:about am:spoon_1 .
+am:lunch am:requires am:spoon_present .

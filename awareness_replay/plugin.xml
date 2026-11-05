@@ -1,0 +1,12 @@
+<library path="src">
+  <class name="Replay" type="awareness_replay.replay.Replay" base_class_type="rqt_gui_py::Plugin">
+    <description>Step through a recorded awareness manager run.</description>
+    <qtgui>
+      <group>
+        <label>Awareness</label>
+      </group>
+      <label>Replay</label>
+      <statustip>Step through a recorded awareness manager run.</statustip>
+    </qtgui>
+  </class>
+</library>

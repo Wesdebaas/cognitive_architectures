@@ -1,0 +1,11 @@
+# Settings for a testbed run in this scenario. Read by testbed/run.py, never by the awareness manager.
+
+# Seconds one run lasts: 07:30 to 22:00 at 600 seconds per day hour. Chosen: 8700.
+run_length: 8700
+
+# Where the robot is when the run starts.
+start_position: dock
+
+# How a replay shows time as a clock: t = 0 is this time of day, and this many seconds pass per day hour.
+day_start: "07:30"
+seconds_per_day_hour: 600

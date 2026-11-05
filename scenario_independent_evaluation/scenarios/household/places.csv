@@ -1,0 +1,17 @@
+place,x,y
+dock,7,2
+cupboard_1,0,4
+cupboard_2,2,4
+cupboard_3,4,4
+cupboard_4,6,4
+drawer_1,0,0
+drawer_2,2,0
+countertop_1,3,0
+dishwasher_1,4,0
+stove_1,5,0
+sink_1,6,0
+refrigerator_1,0,2
+oven_1,6,2
+table_1,9,2
+coffee_table_1,14,2
+sofa_1,15,4

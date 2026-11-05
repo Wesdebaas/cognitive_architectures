@@ -12,6 +12,7 @@ gives it everything it uses. No ROS.
 
 Every goal's beliefs are derived once (prepare). At run time it is told which goal is active (set_goal) and what
 an action reported at its target (observe), and asked what to do next (decide). A goal switch keeps every observation.
+Knowledge told during a run (tell) is stored, and nothing is derived from it.
 
 Observations are stored apart from beliefs: what was seen is a fact about the world, a belief is a hypothesis. An action
 reports a value of its claim for the items it assessed at its target. An action type declared complete assesses every
@@ -165,6 +166,10 @@ class AwarenessManager:
         self.types = self.action_types()
         self.goal = None
         self.snapshots = {}   # (place, claim) -> [(t, {item: value}, complete)], oldest first
+
+    def tell(self, turtle):
+        """Store knowledge told during a run, as Turtle text. Beliefs and actions stay as prepare derived them."""
+        self.knowledge.load(input=turtle.encode(), format=ox.RdfFormat.TURTLE)
 
     def set_goal(self, goal):
         """Make this goal the active one. Observations are kept: what was seen for one goal counts for the next."""

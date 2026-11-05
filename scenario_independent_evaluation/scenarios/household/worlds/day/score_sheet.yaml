@@ -1,0 +1,106 @@
+# The score sheet for this world. Each setup describes the world or the request, never the system.
+# Each check is computed from a run's event log by testbed/score.py. Times are in seconds from 07:30, with 600 s per day hour.
+# predicted: what was expected of each policy, written before the first run; a wrong prediction stays and is reported.
+# Outcomes are PASS, FAIL or NA (the situation did not occur). There is no total: the rows are chosen.
+
+rows:
+  # Controls
+  - id: C1
+    setup: A new goal arrives; a shared item was seen earlier and has not moved
+    check: {type: known_at, t: 6600, item: table_fork_1, place: drawer_2}
+    predicted: {am: PASS, round_robin: FAIL}
+  - id: C2
+    setup: Item with a weak source link, in a place another needed item links to strongly
+    check: {type: seen, item: wine_glass_1, place: cupboard_2, from: 6600, to: 7500}
+    predicted: {am: PASS, round_robin: PASS}
+  - id: C3
+    setup: Item in a place the source links strongly
+    check: {type: seen, item: breakfast_plate_1, place: table_1, from: 0, to: 900}
+    predicted: {am: PASS, round_robin: PASS}
+  - id: C4
+    setup: Item is seen, later moves to another linked, reachable place
+    check:
+      type: all_of
+      checks:
+        - {type: seen, item: breakfast_plate_1, place: table_1, from: 3300, to: 3700}
+        - {type: seen, item: breakfast_plate_1, place: cupboard_1, from: 3700, to: 4100}
+        - {type: seen, item: breakfast_plate_1, place: table_1, from: 4100, to: 4500}
+    predicted: {am: PASS, round_robin: PASS}
+
+  # Moving world
+  - id: M1
+    setup: Item seen in one place and stays there; another place also links to it
+    applies_if: {type: seen, item: cup_1, place: dishwasher_1, from: 0, to: 900}
+    check: {type: first_look, among: [dishwasher_1, table_1], expect: dishwasher_1, from: 900, to: 1500}
+    predicted: {am: FAIL, round_robin: FAIL}
+  - id: M2
+    setup: Item sits in an unlinked place the robot visits for other items; later a goal needs only this item
+    applies_if: {type: seen, item: cup_1, place: cupboard_2, from: 1500, to: 4500}
+    check: {type: looked, place: cupboard_2, from: 4500, to: 5700}
+    predicted: {am: FAIL, round_robin: PASS}
+  - id: M3
+    setup: Item in an unlinked place no goal ever sends the robot to
+    check: {type: seen, item: cup_1, place: coffee_table_1, from: 8000, to: 8700}
+    predicted: {am: FAIL, round_robin: PASS}
+  - id: M4
+    setup: Item in a weakly linked place that stays below the threshold
+    check: {type: seen, item: pot_1, place: cupboard_1, from: 5750, to: 6600}
+    predicted: {am: FAIL, round_robin: PASS}
+  - id: M5
+    setup: Same link strength; one item never moves, another moves often
+    check: {type: fewer_looks, fewer: cupboard_2, than: table_1, from: 3000, to: 4500}
+    predicted: {am: FAIL, round_robin: FAIL}
+  - id: M6
+    setup: Item always in the same one of several identical places
+    check: {type: first_look, among: [cupboard_1, cupboard_2, cupboard_3, cupboard_4], expect: cupboard_2, from: 3000, to: 4500}
+    predicted: {am: FAIL, round_robin: FAIL}
+  - id: M7
+    setup: A goal arrives at about the same time every day
+    check: {type: not_run, reason: needs a second day}
+    predicted: {am: FAIL, round_robin: FAIL}
+  - id: M8
+    setup: Every item of the goal has been seen and has not moved
+    check: {type: answered, goal: breakfast}
+    predicted: {am: FAIL, round_robin: FAIL}
+
+  # Knowledge added during the run
+  - id: R1
+    setup: "Told: an active goal also needs a new item, in a linked place"
+    check: {type: counted, items: [knife_1], from: 50, to: 900}
+    predicted: {am: FAIL, round_robin: FAIL}
+  - id: R2
+    setup: "Told: a new item no goal needs; later a goal needs it"
+    check: {type: counted, items: [pan_1], from: 5700, to: 6600}
+    predicted: {am: FAIL, round_robin: FAIL}
+  - id: R3
+    setup: "Told: a new goal; it then arrives"
+    check: {type: counted, items: [pan_1, pot_1], from: 5700, to: 6600}
+    predicted: {am: FAIL, round_robin: FAIL}
+  - id: R4
+    setup: "Told: a new place, and an item is in it"
+    check: {type: seen, item: breakfast_plate_1, place: cupboard_4, from: 2100, to: 3300}
+    predicted: {am: FAIL, round_robin: PASS}
+  - id: R5
+    setup: "Told: a new item the source links to no place, in a place nothing sends the robot to"
+    check: {type: seen, item: wine_bottle_1, place: refrigerator_1, from: 6650, to: 7500}
+    predicted: {am: FAIL, round_robin: PASS}
+  - id: R6
+    setup: "Told: a new item, in a place inspected just before it arrived"
+    applies_if: {type: looked, place: drawer_1, from: 15, to: 45}
+    check: {type: first_look, expect: drawer_1, from: 50, to: 900}
+    predicted: {am: FAIL, round_robin: NA}
+  - id: R8
+    setup: "Told: a new item the robot already saw, and it has not moved"
+    check: {type: known_at, t: 2700, item: spoon_1, place: table_1}
+    predicted: {am: FAIL, round_robin: FAIL}
+  - id: R7
+    setup: "Never told: an item appears; a goal needs a salad bowl and this is one"
+    check: {type: counted, items: [salad_bowl_1], from: 7500, to: 8100}
+    predicted: {am: FAIL, round_robin: FAIL}
+
+not_attempted:
+  - {id: N1, setup: Perception misses or invents items}
+  - {id: N2, setup: Trust in a borrowed link should depend on how far up it came from}
+  - {id: N3, setup: "The classifier's label has no ontology class"}
+  - {id: N4, setup: Two instances of a class where it matters which one}
+  - {id: N5, setup: "Fetching, manipulation, dialogue, open commands"}

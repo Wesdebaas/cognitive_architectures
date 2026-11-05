@@ -48,6 +48,19 @@ class Executor:
                   for row in self.world.query(f'SELECT ?place WHERE {{ <{AM}{item}> <{AM}isAt> ?place }}')]
         return ' '.join(sorted(places))
 
+    def locations(self):
+        """{item: place} for every item at a place. For the run log only, never for the awareness manager."""
+        rows = self.world.query(f'SELECT ?item ?place WHERE {{ ?item <{AM}isAt> ?place }}')
+        return {row['item'].value.split('#')[-1]: row['place'].value.split('#')[-1] for row in rows}
+
+    def classes(self, items):
+        """{item: its class} for the items the world file gives a class. Perfect classification: never wrong."""
+        found = {}
+        for item in items:
+            for row in self.world.query(f'SELECT ?class WHERE {{ <{AM}{item}> a ?class }}'):
+                found[item] = row['class'].value.split('#')[-1]
+        return found
+
     def execute(self, action_type, target):
         """{item: value of the action's claim} for the items the action assessed at the target."""
         if action_type == 'inspect':

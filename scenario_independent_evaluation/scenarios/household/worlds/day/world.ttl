@@ -1,0 +1,29 @@
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+# The true state of the world at t = 0; world_events.csv changes it during a run, goal_events.csv says when
+# which goal arrives. Only the testbed reads these files; the awareness manager never does.
+# The knife and the salad bowl are at no place at t = 0: world_events.csv brings them in.
+# Chosen: by hand, so that each row of the score sheet can occur.
+am:breakfast_plate_1 am:isAt am:table_1 .
+am:cup_1             am:isAt am:dishwasher_1 .
+am:table_fork_1      am:isAt am:drawer_2 .
+am:pasta_bowl_1      am:isAt am:cupboard_2 .
+am:wine_glass_1      am:isAt am:cupboard_2 .
+am:spoon_1           am:isAt am:table_1 .
+am:pan_1             am:isAt am:oven_1 .
+am:pot_1             am:isAt am:stove_1 .
+am:wine_bottle_1     am:isAt am:refrigerator_1 .
+
+# What each item really is, which a classifier reports when the item is seen.
+am:breakfast_plate_1 a SOMA:BreakfastPlate .
+am:cup_1             a SOMA:Cup .
+am:table_fork_1      a SOMA:TableFork .
+am:pasta_bowl_1      a SOMA:PastaBowl .
+am:wine_glass_1      a SOMA:WineGlass .
+am:spoon_1           a SOMA:Spoon .
+am:knife_1           a SOMA:Knife .
+am:pan_1             a SOMA:Pan .
+am:pot_1             a SOMA:Pot .
+am:wine_bottle_1     a SOMA:WineBottle .
+am:salad_bowl_1      a SOMA:SaladBowl .

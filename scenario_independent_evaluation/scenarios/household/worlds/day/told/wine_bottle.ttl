@@ -1,0 +1,7 @@
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+# Dinner also needs a wine bottle.
+am:wine_bottle_1 a am:Item , SOMA:WineBottle .
+am:wine_bottle_present a am:Condition ; am:about am:wine_bottle_1 .
+am:dinner am:requires am:wine_bottle_present .
