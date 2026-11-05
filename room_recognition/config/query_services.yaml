@@ -1,7 +1,0 @@
-# Each entry creates a ROS service backed by a SPARQL query file from the
-# queries/ directory.
-
-query_services:
-  classify_room:
-    query_file: classify_room.sparql
-    reasoning: false

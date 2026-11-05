@@ -1,7 +1,0 @@
-# Insertion subscribers run a Jinja2 SPARQL template on every message
-# received on the given topic, inserting the result into the KB.
-
-insertion_subscribers:
-  yolo_detections:
-    topic: "/yolo/detections_3d"
-    template: "room_observations.sparql.tmpl"
