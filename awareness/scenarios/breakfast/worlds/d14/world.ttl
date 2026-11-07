@@ -1,7 +1,0 @@
-@prefix am: <http://example.org/awareness-manager#> .
-
-# The true state of the world at t = 0; world_events.csv changes it during a run, goal_events.csv says when
-# which goal arrives. Only the testbed reads these files; the awareness manager never does.
-# Chosen: by hand.
-am:breakfast_plate_1 am:isAt am:table_1 .
-am:cup_1             am:isAt am:dishwasher_1 .

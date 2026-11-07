@@ -42,12 +42,6 @@ class Executor:
             applied.append(event)
         return applied
 
-    def location(self, item):
-        """Where the item really is, '' if at no place. For the run log only, never for the awareness manager."""
-        places = [row['place'].value.split('#')[-1]
-                  for row in self.world.query(f'SELECT ?place WHERE {{ <{AM}{item}> <{AM}isAt> ?place }}')]
-        return ' '.join(sorted(places))
-
     def locations(self):
         """{item: place} for every item at a place. For the run log only, never for the awareness manager."""
         rows = self.world.query(f'SELECT ?item ?place WHERE {{ ?item <{AM}isAt> ?place }}')

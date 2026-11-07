@@ -3,7 +3,7 @@
 Yellow = ConceptNet word, blue = SOMA class, orange = given by the scenario, white = derived (belief or action).
 
 Run:  python3 draw.py <scenario folder> <goal>
-python3 draw.py ../../scenarios/breakfast set_table
+python3 draw.py ../../scenarios/household breakfast
 """
 
 import subprocess

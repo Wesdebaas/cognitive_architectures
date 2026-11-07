@@ -10,12 +10,8 @@ due; then, if the running action has ended, the executor reports what it saw (th
 the awareness manager stores it; then, if the robot is free, the policy decides. Actions are never interrupted.
 A goal the awareness manager does not know is logged and ignored: the previous goal stays active.
 
-Two logs in runs/, named <scenario>_<world>[_<policy>]:
-  .events.jsonl  one JSON object per event (start, told, goal, move, look, decide); everything a replay or a score sheet
-                 needs.
-  .csv           one row per tick, the awareness manager only: the active goal, what was reported without a belief, where
-                 each item really is, E of every belief and P, C, U of every action. Columns are fixed at t = 0, so what
-                 is added during a run appears only in the events.
+The log, runs/<scenario>_<world>[_<policy>].events.jsonl, holds one JSON object per event (start, told, goal, move,
+look, decide): everything a replay or a score sheet needs.
 
 Run:  python3 run.py <scenario folder> <world folder> [policy]     (policy: am, the default, or round_robin)
 python3 run.py ../scenarios/household ../scenarios/household/worlds/day
@@ -45,32 +41,6 @@ def knowledge_events(file):
         return []
     with open(file) as f:
         return sorted((float(row['t']), row['file']) for row in csv.DictReader(f))
-
-
-def log_items(am):
-    """The items any goal has beliefs about."""
-    return sorted({item for item, place, claim in am.a})
-
-
-def log_header(items, beliefs, actions):
-    return (['t', 'position', 'running', 'goal', 'unused']
-            + [f'at {item}' for item in items]
-            + [f'E {item}@{place}' for item, place, claim in beliefs]
-            + [f'{value} {action_type} {target}' for value in 'PCU' for action_type, target in actions])
-
-
-def log_row(am, executor, t, position, action, items, beliefs, actions):
-    """The active goal, what was reported at time t without a belief, where each item really is, then the values
-    the awareness manager sees at time t. C and U are empty for an unreachable target."""
-    p = {o: am.p(o, t) for o in actions}
-    c = {o: am.cost(o, position) for o in actions}
-    unused = [f'{item}@{place} {claim}={value}' for s, item, place, claim, value in am.unused_sightings() if s == t]
-    return ([t, position, ' '.join(action) if action else '', am.goal or '', ' '.join(unused)]
-            + [executor.location(item) for item in items]
-            + [round(am.e(belief, t), 4) for belief in beliefs]
-            + [round(p[o], 4) for o in actions]
-            + ['' if c[o] is None else c[o] for o in actions]
-            + ['' if c[o] is None else round(p[o] / c[o], 4) for o in actions])
 
 
 def held(am):
@@ -103,7 +73,7 @@ def options(am, t, position):
     return found
 
 
-def run(scenario, world, log_file, policy='am'):
+def run(scenario, world, events_file, policy='am'):
     am = scenario.awareness_manager()
     am.prepare()
     executor = Executor(world / 'world.ttl', world / 'world_events.csv')
@@ -115,20 +85,14 @@ def run(scenario, world, log_file, policy='am'):
 
     position = settings['start_position']
     action, ends, started, idle = None, None, None, False
-    log_file.parent.mkdir(parents=True, exist_ok=True)
-    events = open(log_file.with_suffix('.events.jsonl'), 'w')
+    events_file.parent.mkdir(parents=True, exist_ok=True)
+    events = open(events_file, 'w')
 
     def event(kind, t, **fields):
         events.write(json.dumps({'event': kind, 't': t, **fields}) + '\n')
 
     event('start', 0, policy=policy, position=position, locations=executor.locations(),
           threshold=am.parameters['idle_threshold'])
-
-    if informed:
-        items, beliefs, actions = log_items(am), sorted(am.a), sorted(am.b)
-        log = open(log_file, 'w', newline='')
-        writer = csv.writer(log)
-        writer.writerow(log_header(items, beliefs, actions))
 
     for t in range(settings['run_length'] + 1):
         while told and told[0][0] <= t:
@@ -185,19 +149,14 @@ def run(scenario, world, log_file, policy='am'):
                     print(f'{t:>4}  at {position:<15} {action[0]} {action[1]:<15} C = {c:>4g}  ends {ends:g}')
                     event('decide', t, chosen=list(action), options=[])
 
-        if informed:
-            writer.writerow(log_row(am, executor, t, position, action, items, beliefs, actions))
-
     events.close()
     if informed:
-        log.close()
         print(f'unused sightings: {len(am.unused_sightings())}')
-        print(f'log: {log_file}')
-    print(f'events: {log_file.with_suffix(".events.jsonl")}')
+    print(f'events: {events_file}')
 
 
 if __name__ == '__main__':
     folder, world = Path(sys.argv[1]), Path(sys.argv[2])
     policy = sys.argv[3] if len(sys.argv) > 3 else 'am'
     name = f'{folder.resolve().name}_{world.resolve().name}' + ('' if policy == 'am' else f'_{policy}')
-    run(load_scenario(folder), world, Path(__file__).resolve().parent / 'runs' / f'{name}.csv', policy)
+    run(load_scenario(folder), world, Path(__file__).resolve().parent / 'runs' / f'{name}.events.jsonl', policy)

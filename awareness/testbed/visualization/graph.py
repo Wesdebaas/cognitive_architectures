@@ -10,7 +10,7 @@ Graph 4: graph 3 condensed: each item -> place link becomes a belief with its re
 Graph 2 and 3 draw ConceptNet itself, so unlike the awareness manager they name it.
 
 Run:  python3 graph.py <scenario folder> <goal>
-python3 graph.py ../../scenarios/breakfast set_table
+python3 graph.py ../../scenarios/household breakfast
 """
 
 import sys
