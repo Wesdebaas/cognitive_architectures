@@ -19,10 +19,11 @@ from run import run
 
 SCENARIOS = Path(__file__).resolve().parent.parent / 'scenarios'
 
-# (scenario, world, policy, SHA-256 of the event log). Recorded at commit 9ade0e0.
+# (scenario, world, policy, SHA-256 of the event log). Recorded with K, V and S: beliefs derived again after each telling
+# and each find; an item is present at one place at a time.
 RECORDED = [
-    ('household', 'day', 'am', 'e5e95d5df8f20abce043d720f322e58c453e96514f3fc37506f16a9b3c73536e'),
-    ('household', 'day', 'round_robin', '870fd20be0f35342d7e64453475b1d19e25a18f6f02a8bc01482645c0b1728ac'),
+    ('household', 'day', 'am', '455d0ffb057e6aec56757549b50cc7a4720541de8b98ba4d22def05d1434207d'),
+    ('household', 'day', 'round_robin', 'f7e83f845f9b8c20196d344c5a66b6fb7c48bbf997307dcb78d1595b9b7bcc5d'),
 ]
 
 

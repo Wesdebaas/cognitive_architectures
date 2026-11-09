@@ -5,13 +5,15 @@ time t on, the item is at the place), goal_events.csv (t,goal: from time t on, t
 knowledge_events.csv (t,file: at time t the awareness manager is told this Turtle file, relative to the world folder).
 Only the testbed reads them; the awareness manager learns of a goal when it arrives and of the world by observing.
 
-Each tick: first knowledge is told if due, then a goal arrives if one is due, then the world changes if an event is
-due; then, if the running action has ended, the executor reports what it saw (the world at the end of the action) and
-the awareness manager stores it; then, if the robot is free, the policy decides. Actions are never interrupted.
+Each tick: first knowledge is told if due (the awareness manager derives its beliefs again), then a goal arrives if
+one is due, then the world changes if an event is due; then, if the running action has ended, the executor reports
+what it saw (the world at the end of the action) and the awareness manager stores it (a find derives its beliefs again);
+then, if anything was told, arrived or observed, whether the active goal is answered is logged when it changes; then, if
+the robot is free, the policy decides. Actions are never interrupted.
 A goal the awareness manager does not know is logged and ignored: the previous goal stays active.
 
 The log, runs/<scenario>_<world>[_<policy>].events.jsonl, holds one JSON object per event (start, told, goal, move,
-look, decide): everything a replay or a score sheet needs.
+look, answered, unanswered, decide): everything a replay or a score sheet needs.
 
 Run:  python3 run.py <scenario folder> <world folder> [policy]     (policy: am, the default, or round_robin)
 python3 run.py ../scenarios/household ../scenarios/household/worlds/day
@@ -66,7 +68,7 @@ def options(am, t, position):
             if belief in active:
                 observation = am.last_observation(belief)
                 beliefs.append({'item': belief[0], 'observed': observation[0] if observation else None,
-                                'T': am.parameters['T'].get(belief[0]), 'E': round(am.e(belief, t), 4),
+                                'T': am.parameters['T'], 'E': round(am.e(belief, t), 4),
                                 'A': round(am.a[belief], 4)})
         found.append({'type': action_type, 'target': target, 'P': round(p, 4), 'C': c,
                       'U': None if c is None else round(p / c, 4), 'beliefs': beliefs})
@@ -85,6 +87,8 @@ def run(scenario, world, events_file, policy='am'):
 
     position = settings['start_position']
     action, ends, started, idle = None, None, None, False
+    news = False                 # something was told, arrived or observed this tick
+    answered = (None, False)     # (goal, whether the awareness manager last said it is answered)
     events_file.parent.mkdir(parents=True, exist_ok=True)
     events = open(events_file, 'w')
 
@@ -92,14 +96,16 @@ def run(scenario, world, events_file, policy='am'):
         events.write(json.dumps({'event': kind, 't': t, **fields}) + '\n')
 
     event('start', 0, policy=policy, position=position, locations=executor.locations(),
-          threshold=am.parameters['idle_threshold'])
+          threshold=am.parameters['idle_threshold'], c=am.parameters['c'], beliefs=am.explanations())
 
     for t in range(settings['run_length'] + 1):
         while told and told[0][0] <= t:
             name = told.pop(0)[1]
-            am.tell((world / name).read_text())
-            print(f'{t:>4}  told: {name}')
-            event('told', t, file=name, held=held(am))
+            added, removed, changed = am.tell((world / name).read_text(), t)
+            print(f'{t:>4}  told: {name}, {len(added)} beliefs added, {len(removed)} removed')
+            event('told', t, file=name, held=held(am), added=[list(b) for b in added], removed=[list(b) for b in removed],
+                  changed=[list(b) for b in changed], beliefs=am.explanations())
+            news = True
 
         while goals and goals[0][0] <= t:
             goal = goals.pop(0)[1]
@@ -112,6 +118,7 @@ def run(scenario, world, events_file, policy='am'):
             print(f'{t:>4}  goal: {goal}' + ('' if known else f' (unknown, {am.goal} stays active)'))
             event('goal', t, goal=goal, known=known, active=am.goal, held=held(am),
                   options=options(am, t, position) if informed else [])
+            news = True
 
         for _, item, place in executor.advance(t):
             print(f'{t:>4}  world: {item} -> {place or "no place"}')
@@ -119,15 +126,34 @@ def run(scenario, world, events_file, policy='am'):
 
         if action is not None and t >= ends:
             values = executor.execute(*action)
+            derived = {}
             if informed:
-                am.observe(action, values, t)
+                added, removed, changed = am.observe(action, values, t)
                 for s, item, place, claim, value in am.unused_sightings():
                     if s == t:
                         print(f'{t:>4}  reported without a belief: {item} {claim} = {value} at {place}')
+                if added or removed or changed:
+                    print(f'{t:>4}  found at {action[1]}: {len(added)} beliefs added, {len(changed)} changed')
+                    derived = {'added': [list(b) for b in added], 'removed': [list(b) for b in removed],
+                               'changed': [list(b) for b in changed], 'beliefs': am.explanations()}
             event('look', t, started=started, target=action[1], seen=sorted(values), classes=executor.classes(values),
-                  counted=counted(am, action, values) if informed else [])
+                  counted=counted(am, action, values) if informed else [], **derived)
             position = action[1]
             action = None
+            news = True
+
+        if informed and news and am.goal is not None:
+            where = am.answered(am.goal)
+            state = (am.goal, where is not None)
+            if state != answered:
+                if where is not None:
+                    print(f'{t:>4}  answered: {am.goal}')
+                    event('answered', t, goal=am.goal, items=[[item, place, s] for item, (place, s) in where.items()])
+                elif answered[0] == am.goal and answered[1]:
+                    print(f'{t:>4}  no longer answered: {am.goal}')
+                    event('unanswered', t, goal=am.goal)
+                answered = state
+        news = False
 
         if action is None:
             action = decider.decide(t, position)

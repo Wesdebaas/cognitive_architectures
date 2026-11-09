@@ -1,11 +1,7 @@
-# Seconds after which a belief about this item is fully stale: E = min(1, dt / T).
-# Chosen: hand-set, the same for every item, so differences in how often items are checked do not come from T.
-T:
-  breakfast_plate_1: 300
-  cup_1: 300
-  table_fork_1: 300
-  pasta_bowl_1: 300
-  wine_glass_1: 300
+# Seconds after which a belief is fully stale: E = min(1, dt / T).
+# Chosen: hand-set, one value for every item, also for items told during a run, so differences in how often items
+# are checked do not come from T.
+T: 300
 
 # Relevance from w votes: A = 1 - e^(c*w), with c < 0.
 # c = ln 0.9, so one vote gives A = 0.1. Chosen: 0.9.
@@ -14,6 +10,12 @@ c: -0.10536
 # Votes borrowed from a parent class count as A = (1 - alpha) (1 - e^(c*w)), however many steps up.
 # Chosen: 0.5.
 alpha: 0.5
+
+# Finding an item at a place counts as this many votes of the source for that place: A_finds = 1 - e^(c * find_votes * n)
+# after n finds. 10 gives A_finds = 0.65 after one find, more than ConceptNet gives any belief in this house (at most
+# 0.47, the knife in a drawer), because the robot saw this very item there, while ConceptNet speaks about the word.
+# Chosen: 10.
+find_votes: 10
 
 # Only actions with P at or above this value are considered; none -> the robot idles.
 # Chosen: 0.2.

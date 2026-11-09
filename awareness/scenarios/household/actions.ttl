@@ -10,3 +10,6 @@ am:inspect a am:ActionType ;
     am:observesClaim "present" ;
     am:duration      5 ;                        # seconds at the target. Chosen: hand-set
     am:complete      true .                     # every item at the target is seen: what is not seen is not there
+
+# Every item here is one physical thing, so it is present at one place at a time: seen in one place, it is not in the others.
+am:present a am:OnePlaceClaim .

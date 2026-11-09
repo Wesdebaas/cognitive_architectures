@@ -87,25 +87,29 @@ def clock(t, settings):
 
 
 def build_steps(events):
-    """[{t, event, robot, chosen, decided, goal, arrived, items, known, last_seen, threshold, options, computed}]: one step for
-    the start, each goal arrival, each telling, each item move, each finished look, and each decision made at a time when
-    nothing else happened; any other decision joins the step before it. Each step holds what happened, and the state after it: where the
-    robot is, the action it chose, whether it decided at this step, the active goal, a goal that arrived but is unknown to the
-    robot, where every item really is, where the robot's last look at a place says it is, where and when each item was last
-    seen, and P, C and U per action with the time they were computed. They are logged at decisions and goal arrivals; steps in
-    between keep the last values.
+    """[{t, event, robot, chosen, decided, goal, arrived, items, known, last_seen, threshold, c, options, computed,
+    derivations}]: one step for the start, each goal arrival, each telling, each item move, each finished look, and each
+    decision made at a time when nothing else happened; any other decision joins the step before it. Each step holds what
+    happened, and the state after it: where the robot is, the action it chose, whether it decided at this step, the active
+    goal, a goal that arrived but is unknown to the robot, where every item really is, where the robot's last look at a
+    place says it is, where and when each item was last seen, P, C and U per action with the time they were computed, and
+    how every belief's A was derived. P, C and U are logged at decisions and goal arrivals, the derivations at the start,
+    at each telling and at each look that found something; steps in between keep the last values. That a goal is
+    answered, or no longer is, joins the step it happened in.
 
     A look sees everything at its place: an item seen is known to be there, and an item known to be there but not seen no
     longer is, so the robot then does not know where it is."""
     steps = []
     robot, chosen, goal, items, known, last_seen = None, None, None, {}, {}, {}
-    threshold, options, computed = None, [], None
+    threshold, c, options, computed, derivations = None, None, [], None, []
     for event in events:
         arrived = None
         if event.get('options'):
             options, computed = event['options'], event['t']
+        if 'beliefs' in event:
+            derivations = event['beliefs']
         if event['event'] == 'start':
-            robot, items, threshold = event['position'], dict(event['locations']), event['threshold']
+            robot, items, threshold, c = event['position'], dict(event['locations']), event['threshold'], event['c']
             happened = 'start'
         elif event['event'] == 'goal':
             goal = event['active']
@@ -113,7 +117,7 @@ def build_steps(events):
                 arrived = event['goal']
             happened = f"goal arrives: {event['goal']}"
         elif event['event'] == 'told':
-            happened = f"told: {event['file']}"
+            happened = f"told: {event['file']}, {len(event['added'])} beliefs added, {len(event['removed'])} removed"
         elif event['event'] == 'move':
             if event['place']:
                 items[event['item']] = event['place']
@@ -126,6 +130,17 @@ def build_steps(events):
             known.update({item: robot for item in event['seen']})
             last_seen.update({item: (robot, event['t']) for item in event['seen']})
             happened = f"look ends: {event['target']}"
+            if 'beliefs' in event:
+                happened += f", found: {len(event['added'])} beliefs added, {len(event['changed'])} changed"
+        elif event['event'] in ('answered', 'unanswered'):
+            if event['event'] == 'answered':
+                ages = ', '.join(f'{item} at {place} ({event["t"] - t:g} s ago)' for item, place, t in event['items'])
+                happened = f"{event['goal']} answered: {ages}"
+            else:
+                happened = f"{event['goal']} no longer answered"
+            if steps and steps[-1]['t'] == event['t']:
+                steps[-1]['event'] += f'; {happened}'
+                continue
         elif event['event'] == 'decide':
             chosen = event['chosen']
             happened = f"decides: {chosen[1] if chosen else 'wait'}"
@@ -135,8 +150,8 @@ def build_steps(events):
                 continue
         steps.append({'t': event['t'], 'event': happened, 'robot': robot, 'chosen': chosen,
                       'decided': event['event'] == 'decide', 'goal': goal, 'arrived': arrived, 'items': dict(items),
-                      'known': dict(known), 'last_seen': dict(last_seen), 'threshold': threshold, 'options': options,
-                      'computed': computed})
+                      'known': dict(known), 'last_seen': dict(last_seen), 'threshold': threshold, 'c': c,
+                      'options': options, 'computed': computed, 'derivations': derivations})
     return steps
 
 
@@ -181,10 +196,12 @@ def stamps(steps):
 
 
 def panel_steps(steps, times, settings):
-    """What the rqt panel needs per step: the message's exact bag time, and the values it shows."""
+    """What the rqt panel needs per step: the message's exact bag time, and the values it shows. A belief's derivation is
+    found by item@place."""
     return [{'stamp': stamp, 't': step['t'], 'clock': clock(step['t'], settings), 'event': step['event'],
-             'goal': step['goal'], 'arrived': step['arrived'], 'threshold': step['threshold'],
-             'computed': step['computed'], 'ranking': ranking(step), 'item_rows': item_rows(step)}
+             'goal': step['goal'], 'arrived': step['arrived'], 'threshold': step['threshold'], 'c': step['c'],
+             'computed': step['computed'], 'ranking': ranking(step), 'item_rows': item_rows(step),
+             'derivations': {f"{how['item']}@{how['place']}": how for how in step['derivations']}}
             for step, stamp in zip(steps, times)]
 
 

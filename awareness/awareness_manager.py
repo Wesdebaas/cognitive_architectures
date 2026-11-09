@@ -2,32 +2,41 @@
 gives it everything it uses. No ROS.
 
   knowledge        one RDF store: goals, conditions, places, items, their words, action types, and an ontology,
-                   in its default graph. The awareness manager writes into two named graphs of the same store
-                   (see below), so whatever can read the store can read what it derived and observed.
+                   in its default graph. The awareness manager writes into three named graphs of the same store
+                   (see below), so whatever can read the store can read what it derived, observed and decided.
   association      word -> [(word, w)]: the things a source associates with a word, w = weight of evidence (adds up).
                    Each (item, thing) pair becomes a belief about the item at that thing.
   claim            what such a belief claims about the item at the thing (for an AtLocation source: "present");
                    an action type observes the beliefs whose claim it declares.
   transition_cost  (from, to) -> seconds to get into position for an action at `to`, or None if impossible.
                    Travel time for a driving robot, turning time for a pan-tilt camera, 0 for a fixed sensor.
-  parameters       {'T': {item: seconds until a belief about it is fully stale}, 'idle_threshold': P below which nothing is done, 'c': see support, 'alpha': see discount}
+  parameters       {'T': seconds until a belief is fully stale, 'idle_threshold': P below which nothing is done,
+                    'c': see support, 'alpha': see discount, 'find_votes': see derivations}
 
-Every goal's beliefs are derived once (prepare). At run time it is told which goal is active (set_goal) and what
-an action reported at its target (observe), and asked what to do next (decide). A goal switch keeps every observation.
-Knowledge told during a run (tell) is stored, and nothing is derived from it.
+Every goal's beliefs are derived at the start (prepare), again whenever knowledge is told during a run (tell), and again
+whenever an item is found where it was not known to be (observe): a find is evidence, next to the source's. At
+run time it is told which goal is active (set_goal) and what an action reported at its target (observe), and asked
+what to do next (decide). A goal switch keeps every observation.
 
 Observations are stored apart from beliefs: what was seen is a fact about the world, a belief is a hypothesis. An action
 reports a value of its claim for the items it assessed at its target. An action type declared complete assesses every
 item there: an item it did not report has the claim false (looking in a cupboard: what is not seen is not there).
+A claim the knowledge declares an am:OnePlaceClaim holds at one place at a time: an item reported at one place has it
+false at every other place (one knife cannot be in two drawers).
 
-  am:derived       the beliefs, cleared and rebuilt by prepare. A belief names its claim with rdf:reifies (RDF 1.2),
-                   which states the claim without asserting it, and carries its A (am:relevance) and the goals that
-                   need it (am:neededFor):
+  am:derived       the beliefs, amended by derive so it always matches what follows from the default graph. A belief
+                   names its claim with rdf:reifies (RDF 1.2), which states the claim without asserting it, and
+                   carries its A (am:relevance), how A was derived (am:votes w, am:votesFrom the classes the votes
+                   came from, am:discount, one am:edge per association edge used, am:finds n) and the goals that
+                   need it:
                      am:belief_cup_1_present_cupboard_1 rdf:reifies <<( am:cup_1 am:present am:cupboard_1 )>> ;
-                         am:relevance 0.26 ; am:neededFor am:breakfast , am:coffee .
-  am:observations  one am:Look per observation, only ever added to:
+                         am:relevance 0.26 ; am:votes 3.0 ; am:votesFrom SOMA:Cup ; am:discount 1.0 ; am:finds 0 ;
+                         am:edge am:belief_cup_1_present_cupboard_1_edge_1 ; am:neededFor am:breakfast , am:coffee .
+                     am:belief_cup_1_present_cupboard_1_edge_1 am:word "cup" ; am:placeWord "cupboard" ; am:votes 3.0 .
+  am:observations  one am:Look per observation and one am:Telling per telling, only ever added to:
                      am:look_7 a am:Look ; am:action am:inspect ; am:target am:table_1 ; am:claim "present" ;
-                         am:t 263 ; am:complete true ; am:reported [ am:item am:cup_1 ; am:value true ] .
+                         am:t 263 ; am:complete true ; am:reported [ am:item am:cup_1 ; am:value true ; am:find true ] .
+                     am:telling_1 a am:Telling ; am:t 50 ; am:introduced am:knife_1 .
   am:decisions     one am:Decision per decision, only ever added to: what was weighed and what was chosen. A wait
                    has no am:chosenAction and is written once, when it starts:
                      am:decision_3 a am:Decision ; am:t 263 ; am:position am:dock ; am:goal am:breakfast ;
@@ -85,20 +94,48 @@ class AwarenessManager:
         self.claim = claim
         self.transition_cost = transition_cost
         self.parameters = parameters
+        self.associated = {}   # word -> what the source associates with it; the source does not change during a run
+        self.observed = {}     # belief -> its last observation; only observe and tell change it, and both empty this
 
     def beliefs(self, goal):
-        """{(item, place, claim): A} for every place the association source links to an item the goal needs.
+        """{(item, place, claim): A} for every place the association source links to an item the goal needs."""
+        return {belief: how['A'] for belief, how in self.derivations(goal).items()}
 
-        A = discount x (1 - e^(c*w)), w = the votes of the nearest class level that has any.
+    def derivations(self, goal):
+        """{(item, place, claim): how its A was derived} for every place the association source links to an item the
+        goal needs, or the item was found at: w (the votes of the nearest class level that has any), the classes they
+        came from, the discount, the edges (word, place word, votes) behind w, and n, how often the item was found there.
+
+        The source and the finds are two independent pieces of evidence for the same claim, combined as Shafer combines
+        two simple support functions:
+          A_source = discount x (1 - e^(c*w))      A_finds = 1 - e^(c * find_votes * n)
+          A = 1 - (1 - A_source)(1 - A_finds) = A_source + A_finds - A_source x A_finds
+        A finding counts as find_votes votes of the source would. Neither can rule a place out: A stays below 1.
         """
         places = self.places()
-        beliefs = {}
+        c = self.parameters['c']
+        found = {}
         for item, classes in self.items(goal).items():
             votes, source = self.nearest_evidence(classes, places)
             trust = self.discount(classes, source)
-            for place, w in votes.items():
-                beliefs[(item, place, self.claim)] = trust * support(w, self.parameters['c'])
-        return dict(sorted(beliefs.items()))
+            edges = self.edges(self.words(source), places)
+            finds = self.finds(item)
+            for place in set(votes) | set(finds):
+                w, n = votes.get(place, 0.0), finds.get(place, 0)
+                from_source = trust * support(w, c)
+                from_finds = support(self.parameters['find_votes'] * n, c)
+                found[(item, place, self.claim)] = {
+                    'A': from_source + from_finds - from_source * from_finds, 'w': w, 'discount': trust,
+                    'from': sorted(source), 'edges': sorted(edges.get(place, [])), 'finds': n,
+                    'A_source': from_source, 'A_finds': from_finds}
+        return dict(sorted(found.items()))
+
+    def finds(self, item):
+        """{place: how often the item was found there}: looks that reported it where it was not known to be (observe)."""
+        query = f'''SELECT ?place (COUNT(?look) AS ?n) WHERE {{ GRAPH <{OBSERVATIONS.value}> {{
+            ?look a <{AM}Look> ; <{AM}target> ?place ; <{AM}claim> "{self.claim}" ; <{AM}reported> ?report .
+            ?report <{AM}item> <{AM}{item}> ; <{AM}find> true }} }} GROUP BY ?place'''
+        return {short(row['place']): value(row['n']) for row in self.knowledge.query(query)}
 
     def goals(self):
         """Every goal: everything that requires a condition."""
@@ -132,15 +169,21 @@ class AwarenessManager:
         query = f'SELECT DISTINCT ?parent WHERE {{ VALUES ?class {{ {values} }} ?class <{RDFS}subClassOf> ?parent FILTER isIRI(?parent) }}'
         return {row['parent'].value for row in self.knowledge.query(query)}
 
-    def evidence(self, words, places):
-        """{place: w}: votes summed over every edge from these words to a place's word."""
-        evidence = {}
+    def edges(self, words, places):
+        """{place: [(word, place word, votes)]}: every edge from these words to a place's word."""
+        edges = {}
         for word in words:
-            for end, w in self.association(word):
+            if word not in self.associated:
+                self.associated[word] = self.association(word)
+            for end, w in self.associated[word]:
                 for place_word, place in places:
                     if end == place_word:
-                        evidence[place] = evidence.get(place, 0.0) + w
-        return evidence
+                        edges.setdefault(place, []).append((word, place_word, w))
+        return edges
+
+    def evidence(self, words, places):
+        """{place: w}: votes summed over every edge from these words to a place's word."""
+        return {place: sum(w for word, place_word, w in edges) for place, edges in self.edges(words, places).items()}
 
     def nearest_evidence(self, classes, places):
         """(votes, the classes they came from): climb from the classes, one level at a time, until a level has votes."""
@@ -192,29 +235,82 @@ class AwarenessManager:
     # ---- run time ----
 
     def prepare(self):
-        """Derive every goal's beliefs and every action once (static in v1). No goal is active and nothing is observed yet.
+        """Derive every goal's beliefs and every action from the knowledge at the start. No goal is active and nothing is
+        observed yet.
 
         A belief and its A do not depend on the goal, so one belief can belong to several goals (a shared item).
         """
         for graph in (DERIVED, OBSERVATIONS, DECISIONS):
             self.knowledge.clear_graph(graph)
-        self.prepared_goals = self.goals()   # the goals whose beliefs were derived; set_goal accepts only these
-        for goal in self.prepared_goals:
-            for belief, a in self.beliefs(goal).items():
-                self.store_belief(belief, a, goal)
-        self.actions = list(self.observed_by({}))
-        self.types = self.action_types()
+        self.observed = {}
+        self.derive()
         self.goal = None
 
-    def store_belief(self, belief, a, goal):
-        """Write a belief, its A and one goal that needs it into am:derived. Writing it again for another goal adds
-        only that goal: a store holds each triple once."""
+    def derive(self):
+        """Derive every goal's beliefs and every action from what the store holds now, and amend am:derived to match:
+        what is new is added, what no longer follows is removed, what is unchanged is left alone.
+        Returns (added, removed, changed): the beliefs that appeared, disappeared, and kept their place with another A."""
+        before = self.a
+        wanted = set()
+        self.one_place = bool(self.knowledge.query(f'ASK {{ <{AM}{self.claim}> a <{AM}OnePlaceClaim> }}'))
+        self.prepared_goals = self.goals()   # the goals whose beliefs were derived; set_goal accepts only these
+        for goal in self.prepared_goals:
+            for belief, how in self.derivations(goal).items():
+                wanted |= self.belief_quads(belief, how, goal)
+        present = set(self.knowledge.quads_for_pattern(None, None, None, DERIVED))
+        for quad in present - wanted:
+            self.knowledge.remove(quad)
+        self.knowledge.extend(wanted - present)
+        self.actions = list(self.observed_by({}))
+        self.types = self.action_types()
+        after = self.a
+        return (sorted(set(after) - set(before)), sorted(set(before) - set(after)),
+                sorted(b for b in after if b in before and after[b] != before[b]))
+
+    def belief_quads(self, belief, how, goal):
+        """The quads that state a belief in am:derived: the claim it names, its A and how A was derived, and one goal
+        that needs it. The same belief for another goal gives the same quads plus that goal."""
         item, place, claim = belief
         name = self.belief_node(belief)
-        claimed = ox.Triple(node(item), node(claim), node(place))
-        self.knowledge.extend([ox.Quad(name, ox.NamedNode(f'{RDF}reifies'), claimed, DERIVED),
-                               ox.Quad(name, node('relevance'), ox.Literal(a), DERIVED),
-                               ox.Quad(name, node('neededFor'), node(goal), DERIVED)])
+        triples = [(name, ox.NamedNode(f'{RDF}reifies'), ox.Triple(node(item), node(claim), node(place))),
+                   (name, node('relevance'), ox.Literal(how['A'])), (name, node('votes'), ox.Literal(how['w'])),
+                   (name, node('discount'), ox.Literal(how['discount'])), (name, node('finds'), ox.Literal(how['finds'])),
+                   (name, node('neededFor'), node(goal))]
+        triples += [(name, node('votesFrom'), ox.NamedNode(cls)) for cls in how['from']]
+        for number, (word, place_word, votes) in enumerate(how['edges'], 1):
+            edge = node(f'{name.value.split("#")[-1]}_edge_{number}')
+            triples += [(name, node('edge'), edge), (edge, node('word'), ox.Literal(word)),
+                        (edge, node('placeWord'), ox.Literal(place_word)), (edge, node('votes'), ox.Literal(votes))]
+        return {ox.Quad(*triple, DERIVED) for triple in triples}
+
+    def explanations(self):
+        """[{item, place, claim, A, w, discount, finds, A_source, A_finds, from, edges, goals}] for every belief in
+        am:derived: how its A was derived, read back from the store (A_source and A_finds are recomputed from it)."""
+        def rows(pattern, *names):
+            query = f'''SELECT ?item ?claim ?place {" ".join("?" + n for n in names)} WHERE {{ GRAPH <{DERIVED.value}> {{
+                ?belief <{RDF}reifies> <<( ?item ?claim ?place )>> . {pattern} }} }}'''
+            for row in self.knowledge.query(query):
+                yield (short(row['item']), short(row['place']), short(row['claim'])), row
+        found = {}
+        c = self.parameters['c']
+        for belief, row in rows(f'?belief <{AM}relevance> ?a ; <{AM}votes> ?w ; <{AM}discount> ?d ; <{AM}finds> ?n .',
+                                'a', 'w', 'd', 'n'):
+            w, d, n = value(row['w']), value(row['d']), value(row['n'])
+            found[belief] = {'item': belief[0], 'place': belief[1], 'claim': belief[2], 'A': round(value(row['a']), 4),
+                             'w': w, 'discount': d, 'finds': n, 'A_source': round(d * support(w, c), 4),
+                             'A_finds': round(support(self.parameters['find_votes'] * n, c), 4),
+                             'from': [], 'edges': [], 'goals': []}
+        for belief, row in rows(f'?belief <{AM}votesFrom> ?cls .', 'cls'):
+            found[belief]['from'].append(short(row['cls']))
+        for belief, row in rows(f'?belief <{AM}neededFor> ?goal .', 'goal'):
+            found[belief]['goals'].append(short(row['goal']))
+        for belief, row in rows(f'?belief <{AM}edge> ?e . ?e <{AM}word> ?word ; <{AM}placeWord> ?pw ; <{AM}votes> ?v .',
+                                'word', 'pw', 'v'):
+            found[belief]['edges'].append([row['word'].value, row['pw'].value, value(row['v'])])
+        for how in found.values():
+            for key in ('from', 'edges', 'goals'):
+                how[key].sort()
+        return [found[belief] for belief in sorted(found)]
 
     @staticmethod
     def belief_node(belief):
@@ -251,9 +347,23 @@ class AwarenessManager:
         return {(action_type, target): [b for b in beliefs if b[1] == target and b[2] == self.types[action_type][1]]
                 for action_type, target in self.actions}
 
-    def tell(self, turtle):
-        """Store knowledge told during a run, as Turtle text. Beliefs and actions stay as prepare derived them."""
+    def tell(self, turtle, t):
+        """Store knowledge told at time t, as Turtle text, and derive again. Returns (added, removed, changed) beliefs.
+
+        The telling is recorded in am:observations with the items it introduced. A telling hints that something changed
+        for those items, so an empty look from before it no longer counts for them; a sighting from before it still
+        says where the item was (last_observation).
+        """
+        query = f'SELECT ?item WHERE {{ ?item a <{AM}Item> }}'
+        known = {short(row['item']) for row in self.knowledge.query(query)}
         self.knowledge.load(input=turtle.encode(), format=ox.RdfFormat.TURTLE)
+        introduced = sorted({short(row['item']) for row in self.knowledge.query(query)} - known)
+        telling = node(f'telling_{self.count("Telling", OBSERVATIONS) + 1}')
+        quads = [(telling, ox.NamedNode(f'{RDF}type'), node('Telling')), (telling, node('t'), ox.Literal(t))]
+        quads += [(telling, node('introduced'), node(item)) for item in introduced]
+        self.knowledge.extend([ox.Quad(*quad, OBSERVATIONS) for quad in quads])
+        self.observed = {}
+        return self.derive()
 
     def set_goal(self, goal):
         """Make this goal the active one. Observations are kept: what was seen for one goal counts for the next."""
@@ -263,9 +373,15 @@ class AwarenessManager:
 
     def observe(self, action, values, t):
         """Store what an action reported at time t: {item: value of its claim} for the items it assessed at its target.
-        One am:Look in am:observations, numbered in the order the looks were made."""
+        One am:Look in am:observations, numbered in the order the looks were made.
+
+        A report of the claim true where the last observation did not already say so is a find (am:find true): the item
+        turned up there. A find is evidence for that belief, so the beliefs are derived again. A report that confirms
+        what was already seen is not a find, so a place the robot checks often does not raise its own A.
+        Returns (added, removed, changed) beliefs, all empty if nothing was found."""
         action_type, target = action
         classes, claim, duration, complete = self.types[action_type]
+        found = {item for item, reported in values.items() if reported is True and self.seen((item, target, claim)) is not True}
         look = node(f'look_{self.count("Look", OBSERVATIONS) + 1}')
         quads = [(look, ox.NamedNode(f'{RDF}type'), node('Look')), (look, node('action'), node(action_type)),
                  (look, node('target'), node(target)), (look, node('claim'), ox.Literal(claim)),
@@ -274,23 +390,70 @@ class AwarenessManager:
             report = ox.BlankNode()
             quads += [(look, node('reported'), report), (report, node('item'), node(item)),
                       (report, node('value'), ox.Literal(reported))]
+            if item in found:
+                quads.append((report, node('find'), ox.Literal(True)))
         self.knowledge.extend([ox.Quad(*quad, OBSERVATIONS) for quad in quads])
+        self.observed = {}
+        return self.derive() if found else ([], [], [])
 
     def last_observation(self, belief):
         """(t, value) of the last observation that assessed the belief's item at its place, or None if there was none.
 
-        An item a complete action did not report has the claim false; an incomplete action says nothing about it.
+        An item a complete action did not report has the claim false; an incomplete action says nothing about it. If the
+        claim is an am:OnePlaceClaim (an item is present at one place at a time), a report of it true at another place
+        also says it is false here, at that time. Such an absence no longer counts once a later telling introduced the
+        item (tell).
         """
+        if belief not in self.observed:
+            self.observed[belief] = self.query_last_observation(belief)
+        return self.observed[belief]
+
+    def query_last_observation(self, belief):
+        """last_observation, read from am:observations."""
         item, place, claim = belief
+        not_told_since = f'''NOT EXISTS {{
+            ?telling a <{AM}Telling> ; <{AM}introduced> <{AM}{item}> ; <{AM}t> ?told FILTER(?told > ?t) }}'''
         query = f'''SELECT ?t ?complete ?value WHERE {{ GRAPH <{OBSERVATIONS.value}> {{
             ?look a <{AM}Look> ; <{AM}target> <{AM}{place}> ; <{AM}claim> "{claim}" ; <{AM}t> ?t ;
                   <{AM}complete> ?complete .
             OPTIONAL {{ ?look <{AM}reported> ?report . ?report <{AM}item> <{AM}{item}> ; <{AM}value> ?value }}
-            FILTER(BOUND(?value) || ?complete) }} }}
+            FILTER(BOUND(?value) || (?complete && {not_told_since})) }} }}
             ORDER BY DESC(?t) LIMIT 1'''
+        here = None
         for row in self.knowledge.query(query):
-            return value(row['t']), value(row['value']) if row['value'] is not None else False
+            here = value(row['t']), value(row['value']) if row['value'] is not None else False
+        if self.one_place:
+            query = f'''SELECT ?t WHERE {{ GRAPH <{OBSERVATIONS.value}> {{
+                ?look a <{AM}Look> ; <{AM}target> ?other ; <{AM}claim> "{claim}" ; <{AM}t> ?t ; <{AM}reported> ?report .
+                ?report <{AM}item> <{AM}{item}> ; <{AM}value> true
+                FILTER(?other != <{AM}{place}> && {not_told_since}) }} }}
+                ORDER BY DESC(?t) LIMIT 1'''
+            for row in self.knowledge.query(query):
+                if here is None or value(row['t']) > here[0]:
+                    return value(row['t']), False
+        return here
+
+    def location(self, item):
+        """(place, t): where the item was last found present and when, if no later observation says it is gone; else None."""
+        query = f'''SELECT ?place ?t WHERE {{ GRAPH <{OBSERVATIONS.value}> {{
+            ?look a <{AM}Look> ; <{AM}target> ?place ; <{AM}claim> "{self.claim}" ; <{AM}t> ?t ; <{AM}reported> ?report .
+            ?report <{AM}item> <{AM}{item}> ; <{AM}value> true }} }} ORDER BY DESC(?t) LIMIT 1'''
+        for row in self.knowledge.query(query):
+            place = short(row['place'])
+            if self.seen((item, place, self.claim)):
+                return place, value(row['t'])
         return None
+
+    def answered(self, goal):
+        """{item: (place, t)} if every item the goal needs has a location (location), else None. It says what the last
+        observations say, so it can be out of date: t tells how old each one is. A goal that names no item is never
+        answered."""
+        where = {}
+        for item in sorted(self.items(goal)):
+            where[item] = self.location(item)
+            if where[item] is None:
+                return None
+        return where or None
 
     def seen(self, belief):
         """What the last observation said about the belief: True, False, or None if never observed."""
@@ -313,8 +476,7 @@ class AwarenessManager:
         observation = self.last_observation(belief)
         if observation is None:
             return 1.0
-        item = belief[0]
-        return min(1.0, (t - observation[0]) / self.parameters['T'][item])
+        return min(1.0, (t - observation[0]) / self.parameters['T'])
 
     def p(self, action, t):
         """Priority: sum of E x A over B(o), the active goal's beliefs the action observes. 0 if no goal is active."""

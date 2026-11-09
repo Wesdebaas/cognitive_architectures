@@ -25,6 +25,7 @@ TOPIC = '/awareness/view'
 # The columns of the three tables.
 RANKING_COLUMNS = ['Action', 'P', 'C (s)', 'U', '']
 BELIEF_COLUMNS = ['Item', 'Last observed at t', 'T (s)', 'E', 'A', 'E x A']
+EDGE_COLUMNS = ['Word', 'Place word', 'Votes']
 ITEM_COLUMNS = ['Item', 'Really at', "Robot's looks say", 'Last seen at', 'At t', '']
 
 # Least width of each table and height of a table row, in pixels. Chosen: by looking at the panel, so that no column is cut off.
@@ -132,9 +133,15 @@ class Replay(Plugin):
         self.ranking_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.ranking_table.cellClicked.connect(lambda row, column: self.select_action(row))
         self.belief_table, self.item_table = new_table(BELIEF_COLUMNS), new_table(ITEM_COLUMNS)
-        self.belief_title = QLabel()
+        self.belief_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.belief_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.belief_table.cellClicked.connect(lambda row, column: self.select_belief(row))
+        self.belief_title, self.derivation_title, self.derivation_value = QLabel(), QLabel(), QLabel()
+        self.edge_table = new_table(EDGE_COLUMNS)
         fit(self.ranking_table, RANKING_WIDTH, max(len(step['ranking']) for step in self.steps) + 1)
         fit(self.belief_table, BELIEF_WIDTH, max((len(row['beliefs']) for step in self.steps for row in step['ranking']), default=0) + 1)
+        fit(self.edge_table, BELIEF_WIDTH, max((len(how['edges']) for step in self.steps for how in step['derivations'].values()),
+                                               default=0))
         fit(self.item_table, ITEM_WIDTH, max(len(step['item_rows']) for step in self.steps))
 
         top_left = QVBoxLayout()
@@ -144,6 +151,9 @@ class Replay(Plugin):
         top_right = QVBoxLayout()
         top_right.addWidget(self.belief_title)
         top_right.addWidget(self.belief_table)
+        top_right.addWidget(self.derivation_title)
+        top_right.addWidget(self.edge_table)
+        top_right.addWidget(self.derivation_value)
         top_right.addStretch()
         bottom_left = QVBoxLayout()
         bottom_left.addWidget(QLabel('Ranking (click an action to see its beliefs)'))
@@ -186,21 +196,62 @@ class Replay(Plugin):
         marked = [index for index in actions if self.ranking_rows[index]['mark']]
         self.belief_title.setText('Beliefs')
         self.belief_table.setRowCount(0)
+        self.shown_beliefs, self.shown_target = [], None
+        self.show_derivation(None)
         if actions:
             self.select_action((marked or actions)[0])
 
     def select_action(self, index):
-        """Show the beliefs of the action in this row of the ranking: the sum that makes its P. The threshold row has none."""
+        """Show the beliefs of the action in this row of the ranking: the sum that makes its P, and how the first belief's
+        A was derived. The threshold row has none."""
         row = self.ranking_rows[index]
         if row is None:
             return
         self.ranking_table.selectRow(index)
-        self.belief_title.setText(f"Beliefs of {row['action']}")
+        self.belief_title.setText(f"Beliefs of {row['action']} (click a belief to see how its A was derived)")
         self.belief_table.setRowCount(len(row['beliefs']) + 1)
         for number, belief in enumerate(row['beliefs']):
             set_row(self.belief_table, number, [belief['item'], text(belief['observed']), text(belief['T']), f"{belief['E']:.4f}",
                                                 f"{belief['A']:.4f}", f"{belief['E'] * belief['A']:.4f}"])
         set_row(self.belief_table, len(row['beliefs']), ['P', '', '', '', '', f"{row['P']:.4f}"], True)
+        self.shown_beliefs, self.shown_target = row['beliefs'], row['action'].split()[-1]
+        self.show_derivation(None)
+        if self.shown_beliefs:
+            self.select_belief(0)
+
+    def select_belief(self, index):
+        """Show how the A of the belief in this row of the beliefs table was derived. The P row has none."""
+        if index >= len(self.shown_beliefs):
+            return
+        self.belief_table.selectRow(index)
+        item = self.shown_beliefs[index]['item']
+        self.show_derivation(item, self.steps[self.wanted]['derivations'].get(f'{item}@{self.shown_target}'))
+
+    def show_derivation(self, item, how=None):
+        """The edges behind a belief's votes, where the votes came from, and the sum that makes its A."""
+        self.edge_table.setRowCount(0)
+        if item is None:
+            self.derivation_title.setText('How A was derived')
+            self.derivation_value.setText('')
+            return
+        self.derivation_title.setText(f'How A of {item} at {self.shown_target} was derived: the association edges')
+        if how is None:
+            self.derivation_value.setText('not logged')
+            return
+        self.edge_table.setRowCount(len(how['edges']))
+        for number, (word, place_word, votes) in enumerate(how['edges']):
+            set_row(self.edge_table, number, [word, place_word, f'{votes:g}'])
+        own = how['discount'] == 1
+        c = self.steps[self.wanted]['c']
+        source = ', '.join(how['from']) or 'none'
+        self.derivation_value.setText(
+            f"Votes from class {source}: {'its own class' if own else 'a parent class, so borrowed'}\n"
+            f"w = {how['w']:g} votes, discount = {how['discount']:g}\n"
+            f"A_source = discount x (1 - e^(c x w)) = {how['discount']:g} x (1 - e^({c:g} x {how['w']:g}))"
+            f" = {how['A_source']:.4f}\n"
+            f"Times found here: {how['finds']}, so A_finds = {how['A_finds']:.4f}\n"
+            f"A = A_source + A_finds - A_source x A_finds = {how['A']:.4f}\n"
+            f"Needed for: {', '.join(how['goals'])}")
 
     def show_items(self, rows):
         """One table row per item: where it really is next to what the robot knows. A row that differs is bold and says so."""
