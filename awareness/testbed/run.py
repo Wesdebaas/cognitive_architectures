@@ -3,7 +3,8 @@
 A world is a folder with these files: world.ttl (where every item is at t = 0), world_events.csv (t,item,place: from
 time t on, the item is at the place), goal_events.csv (t,goal: from time t on, this goal is active) and, optionally,
 knowledge_events.csv (t,file: at time t the awareness manager is told this Turtle file, relative to the world folder).
-Only the testbed reads them; the awareness manager learns of a goal when it arrives and of the world by observing.
+Only the testbed reads them. The awareness manager is told every goal arrival in advance, at the start (announce), and
+when each goal arrives; of the world it learns only by observing.
 
 Each tick: first knowledge is told if due (the awareness manager derives its beliefs again), then a goal arrives if
 one is due, then the world changes if an event is due; then, if the running action has ended, the executor reports
@@ -57,19 +58,17 @@ def counted(am, action, values):
 
 
 def options(am, t, position):
-    """P, C and U of every action, as the awareness manager sees them at time t, with the beliefs P sums over: the active
-    goal's beliefs the action observes."""
-    active = am.goal_beliefs.get(am.goal, set())
+    """P, C and U of every action, as the awareness manager sees them at time t, with the beliefs P sums over: those the
+    action observes that a weighted goal needs, each with its weight."""
     found = []
     for action_type, target in sorted(am.b):
         p, c = am.p((action_type, target), t), am.cost((action_type, target), position)
+        claim = am.types[action_type][1]
         beliefs = []
-        for belief in sorted(am.b[(action_type, target)]):
-            if belief in active:
-                observation = am.last_observation(belief)
-                beliefs.append({'item': belief[0], 'observed': observation[0] if observation else None,
-                                'T': am.parameters['T'], 'E': round(am.e(belief, t), 4),
-                                'A': round(am.a[belief], 4)})
+        for item, e, a, weight in am.terms((action_type, target), t):
+            observation = am.last_observation((item, target, claim))
+            beliefs.append({'item': item, 'observed': observation[0] if observation else None,
+                            'T': am.parameters['T'], 'E': round(e, 4), 'A': round(a, 4), 'weight': round(weight, 4)})
         found.append({'type': action_type, 'target': target, 'P': round(p, 4), 'C': c,
                       'U': None if c is None else round(p / c, 4), 'beliefs': beliefs})
     return found
@@ -95,8 +94,12 @@ def run(scenario, world, events_file, policy='am'):
     def event(kind, t, **fields):
         events.write(json.dumps({'event': kind, 't': t, **fields}) + '\n')
 
+    if informed:
+        for arrival, goal in goals:
+            am.announce(goal, arrival)
     event('start', 0, policy=policy, position=position, locations=executor.locations(),
-          threshold=am.parameters['idle_threshold'], c=am.parameters['c'], beliefs=am.explanations())
+          threshold=am.parameters['idle_threshold'], c=am.parameters['c'], beliefs=am.explanations(),
+          announced=[[goal, arrival] for arrival, goal in goals] if informed else [])
 
     for t in range(settings['run_length'] + 1):
         while told and told[0][0] <= t:

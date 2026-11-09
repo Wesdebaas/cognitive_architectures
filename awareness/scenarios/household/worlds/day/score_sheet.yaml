@@ -55,8 +55,8 @@ rows:
     check: {type: first_look, among: [cupboard_1, cupboard_2, cupboard_3, cupboard_4], expect: cupboard_2, from: 3000, to: 4500}
     predicted: {am: FAIL, round_robin: FAIL}
   - id: M7
-    setup: A goal arrives at about the same time every day
-    check: {type: not_run, reason: needs a second day}
+    setup: A goal is announced in advance; the goal before it does not need its items
+    check: {type: seen, item: pasta_bowl_1, place: cupboard_2, from: 2400, to: 3000}
     predicted: {am: FAIL, round_robin: FAIL}
   - id: M8
     setup: Every item of the goal has been seen and has not moved

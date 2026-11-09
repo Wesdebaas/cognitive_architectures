@@ -24,12 +24,12 @@ TOPIC = '/awareness/view'
 
 # The columns of the three tables.
 RANKING_COLUMNS = ['Action', 'P', 'C (s)', 'U', '']
-BELIEF_COLUMNS = ['Item', 'Last observed at t', 'T (s)', 'E', 'A', 'E x A']
+BELIEF_COLUMNS = ['Item', 'Last observed at t', 'T (s)', 'E', 'A', 'Goal weight', 'E x A x weight']
 EDGE_COLUMNS = ['Word', 'Place word', 'Votes']
 ITEM_COLUMNS = ['Item', 'Really at', "Robot's looks say", 'Last seen at', 'At t', '']
 
 # Least width of each table and height of a table row, in pixels. Chosen: by looking at the panel, so that no column is cut off.
-RANKING_WIDTH, BELIEF_WIDTH, ITEM_WIDTH, ROW_HEIGHT = 430, 560, 700, 26
+RANKING_WIDTH, BELIEF_WIDTH, ITEM_WIDTH, ROW_HEIGHT = 430, 660, 700, 26
 
 
 def fit(table, width, rows):
@@ -212,8 +212,9 @@ class Replay(Plugin):
         self.belief_table.setRowCount(len(row['beliefs']) + 1)
         for number, belief in enumerate(row['beliefs']):
             set_row(self.belief_table, number, [belief['item'], text(belief['observed']), text(belief['T']), f"{belief['E']:.4f}",
-                                                f"{belief['A']:.4f}", f"{belief['E'] * belief['A']:.4f}"])
-        set_row(self.belief_table, len(row['beliefs']), ['P', '', '', '', '', f"{row['P']:.4f}"], True)
+                                                f"{belief['A']:.4f}", f"{belief['weight']:.4f}",
+                                                f"{belief['E'] * belief['A'] * belief['weight']:.4f}"])
+        set_row(self.belief_table, len(row['beliefs']), ['P', '', '', '', '', '', f"{row['P']:.4f}"], True)
         self.shown_beliefs, self.shown_target = row['beliefs'], row['action'].split()[-1]
         self.show_derivation(None)
         if self.shown_beliefs:

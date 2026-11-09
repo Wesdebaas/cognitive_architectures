@@ -11,12 +11,15 @@ gives it everything it uses. No ROS.
   transition_cost  (from, to) -> seconds to get into position for an action at `to`, or None if impossible.
                    Travel time for a driving robot, turning time for a pan-tilt camera, 0 for a fixed sensor.
   parameters       {'T': seconds until a belief is fully stale, 'idle_threshold': P below which nothing is done,
-                    'c': see support, 'alpha': see discount, 'find_votes': see derivations}
+                    'c': see support, 'alpha': see discount, 'find_votes': see derivations,
+                    'horizon_halflife': see goal_weights}
 
 Every goal's beliefs are derived at the start (prepare), again whenever knowledge is told during a run (tell), and again
 whenever an item is found where it was not known to be (observe): a find is evidence, next to the source's. At
-run time it is told which goal is active (set_goal) and what an action reported at its target (observe), and asked
-what to do next (decide). A goal switch keeps every observation.
+run time it is told when goals will arrive (announce), which goal is active (set_goal) and what an action reported at
+its target (observe), and asked what to do next (decide). A goal switch keeps every observation. P weighs every goal:
+the active one fully, an announced one less the further away its arrival is (goal_weights), so the robot can look for
+the next goal's items before it arrives.
 
 Observations are stored apart from beliefs: what was seen is a fact about the world, a belief is a hypothesis. An action
 reports a value of its claim for the items it assessed at its target. An action type declared complete assesses every
@@ -33,16 +36,19 @@ false at every other place (one knife cannot be in two drawers).
                          am:relevance 0.26 ; am:votes 3.0 ; am:votesFrom SOMA:Cup ; am:discount 1.0 ; am:finds 0 ;
                          am:edge am:belief_cup_1_present_cupboard_1_edge_1 ; am:neededFor am:breakfast , am:coffee .
                      am:belief_cup_1_present_cupboard_1_edge_1 am:word "cup" ; am:placeWord "cupboard" ; am:votes 3.0 .
-  am:observations  one am:Look per observation and one am:Telling per telling, only ever added to:
+  am:observations  one am:Look per observation, one am:Telling per telling and one am:Announcement per announced goal
+                   arrival, only ever added to:
                      am:look_7 a am:Look ; am:action am:inspect ; am:target am:table_1 ; am:claim "present" ;
                          am:t 263 ; am:complete true ; am:reported [ am:item am:cup_1 ; am:value true ; am:find true ] .
                      am:telling_1 a am:Telling ; am:t 50 ; am:introduced am:knife_1 .
+                     am:announcement_3 a am:Announcement ; am:goal am:lunch ; am:arrival 3000 .
   am:decisions     one am:Decision per decision, only ever added to: what was weighed and what was chosen. A wait
                    has no am:chosenAction and is written once, when it starts:
                      am:decision_3 a am:Decision ; am:t 263 ; am:position am:dock ; am:goal am:breakfast ;
                          am:chosenAction am:inspect ; am:chosenTarget am:table_1 ;
                          am:option [ am:action am:inspect ; am:target am:table_1 ;
                                      am:priority 0.61 ; am:cost 25.0 ; am:utility 0.0244 ] ;
+                         am:goalWeight [ am:goal am:breakfast ; am:value 1.0 ] , [ am:goal am:coffee ; am:value 0.13 ] ;
                          am:staleness [ am:belief am:belief_cup_1_present_table_1 ; am:value 1.0 ] .
                    priority = P, cost = C, utility = U, staleness = E. An unreachable option has no cost or utility.
 """
@@ -96,6 +102,7 @@ class AwarenessManager:
         self.parameters = parameters
         self.associated = {}   # word -> what the source associates with it; the source does not change during a run
         self.observed = {}     # belief -> its last observation; only observe and tell change it, and both empty this
+        self.weights = {}      # (t, active goal) -> goal_weights; announce and derive empty this
 
     def beliefs(self, goal):
         """{(item, place, claim): A} for every place the association source links to an item the goal needs."""
@@ -263,6 +270,7 @@ class AwarenessManager:
         self.knowledge.extend(wanted - present)
         self.actions = list(self.observed_by({}))
         self.types = self.action_types()
+        self.weights = {}
         after = self.a
         return (sorted(set(after) - set(before)), sorted(set(before) - set(after)),
                 sorted(b for b in after if b in before and after[b] != before[b]))
@@ -478,17 +486,58 @@ class AwarenessManager:
             return 1.0
         return min(1.0, (t - observation[0]) / self.parameters['T'])
 
-    def p(self, action, t):
-        """Priority: sum of E x A over B(o), the active goal's beliefs the action observes. 0 if no goal is active."""
-        if self.goal is None:
-            return 0.0
+    def announce(self, goal, t):
+        """Store that the goal will arrive at time t: one am:Announcement in am:observations. Arrivals are given, not
+        predicted; an announced goal that is not known yet (no beliefs) has no weight until it is told."""
+        announcement = node(f'announcement_{self.count("Announcement", OBSERVATIONS) + 1}')
+        quads = [(announcement, ox.NamedNode(f'{RDF}type'), node('Announcement')), (announcement, node('goal'), node(goal)),
+                 (announcement, node('arrival'), ox.Literal(t))]
+        self.knowledge.extend([ox.Quad(*quad, OBSERVATIONS) for quad in quads])
+        self.weights = {}
+
+    def goal_weights(self, t):
+        """{goal: weight} at time t: 1 for the active goal; for a known goal announced to arrive later, 2^(-dt / h), dt
+        the time to its next arrival and h = horizon_halflife: a goal h seconds away counts half. Others weigh nothing."""
+        if (t, self.goal) not in self.weights:
+            query = f'''SELECT ?goal (MIN(?arrival) AS ?next) WHERE {{ GRAPH <{OBSERVATIONS.value}> {{
+                ?announcement a <{AM}Announcement> ; <{AM}goal> ?goal ; <{AM}arrival> ?arrival FILTER(?arrival > {t}) }} }}
+                GROUP BY ?goal'''
+            weights = {short(row['goal']): 2 ** (-(value(row['next']) - t) / self.parameters['horizon_halflife'])
+                       for row in self.knowledge.query(query)}
+            weights = {goal: w for goal, w in weights.items() if goal in self.prepared_goals}
+            if self.goal is not None:
+                weights[self.goal] = 1.0
+            self.weights = {(t, self.goal): dict(sorted(weights.items()))}
+        return self.weights[(t, self.goal)]
+
+    @staticmethod
+    def belief_weight(goals, weights):
+        """How much a belief counts: the summed weights of the goals that need it, since its observation serves each."""
+        return sum(weights.get(goal, 0.0) for goal in goals)
+
+    def terms(self, action, t):
+        """[(item, E, A, weight)] for every belief the action observes that a weighted goal needs (goal_weights)."""
         action_type, target = action
         claim = self.types[action_type][1]
-        query = f'''SELECT ?item ?a WHERE {{ GRAPH <{DERIVED.value}> {{
+        weights = self.goal_weights(t)
+        query = f'''SELECT ?item ?a ?goal WHERE {{ GRAPH <{DERIVED.value}> {{
             ?belief <{RDF}reifies> <<( ?item <{AM}{claim}> <{AM}{target}> )>> ; <{AM}relevance> ?a ;
-                    <{AM}neededFor> <{AM}{self.goal}> }} }}'''
-        terms = sorted((short(row['item']), value(row['a'])) for row in self.knowledge.query(query))
-        return sum(self.e((item, target, claim), t) * a for item, a in terms)
+                    <{AM}neededFor> ?goal }} }}'''
+        needs = {}
+        for row in self.knowledge.query(query):
+            a, goals = needs.setdefault(short(row['item']), (value(row['a']), set()))
+            goals.add(short(row['goal']))
+        found = []
+        for item, (a, goals) in sorted(needs.items()):
+            weight = self.belief_weight(goals, weights)
+            if weight > 0:
+                found.append((item, self.e((item, target, claim), t), a, weight))
+        return found
+
+    def p(self, action, t):
+        """Priority: sum of E x A x weight over B(o), the beliefs the action observes that a weighted goal needs (terms).
+        With only the active goal weighted this is the sum of E x A over its beliefs. 0 if no goal has weight."""
+        return sum(e * a * weight for item, e, a, weight in self.terms(action, t))
 
     def cost(self, action, position):
         """C in seconds: the transition to the target plus the action's duration. None if the target is unreachable."""
@@ -499,10 +548,8 @@ class AwarenessManager:
 
     def decide(self, t, position):
         """The action to do now, or None to idle: among actions with P >= threshold, the highest U = P / C, ties by name.
-        Idle while no goal is active. The decision is written into am:decisions."""
-        options = []   # (action, P, C)
-        if self.goal is not None:
-            options = [(action, self.p(action, t), self.cost(action, position)) for action in self.actions]
+        Idle while no goal has weight. The decision is written into am:decisions."""
+        options = [(action, self.p(action, t), self.cost(action, position)) for action in self.actions]
         candidates = [(-p / c, action) for action, p, c in options
                       if p >= self.parameters['idle_threshold'] and c is not None]
         chosen = min(candidates)[1] if candidates else None
@@ -510,8 +557,9 @@ class AwarenessManager:
         return chosen
 
     def record(self, t, position, options, chosen):
-        """Write a decision into am:decisions: the options with their P, C and U, E of every belief the active goal
-        needs, and the chosen action. A wait is written only when it starts, not again while it lasts."""
+        """Write a decision into am:decisions: the options with their P, C and U, the weight of every weighted goal, E of
+        every belief such a goal needs, and the chosen action. A wait is written only when it starts, not again while it
+        lasts."""
         count = self.count('Decision', DECISIONS)
         if chosen is None and count:
             last = f'{AM}decision_{count}'
@@ -530,7 +578,13 @@ class AwarenessManager:
                       (option, node('target'), node(target)), (option, node('priority'), ox.Literal(p))]
             if c is not None:
                 quads += [(option, node('cost'), ox.Literal(c)), (option, node('utility'), ox.Literal(p / c))]
-        for belief in sorted(self.goal_beliefs.get(self.goal, set())):
+        weights = self.goal_weights(t)
+        needs = self.goal_beliefs
+        for goal, weight in weights.items():
+            entry = ox.BlankNode()
+            quads += [(decision, node('goalWeight'), entry), (entry, node('goal'), node(goal)),
+                      (entry, node('value'), ox.Literal(weight))]
+        for belief in sorted(set().union(*(needs[goal] for goal in weights))):
             staleness = ox.BlankNode()
             quads += [(decision, node('staleness'), staleness), (staleness, node('belief'), self.belief_node(belief)),
                       (staleness, node('value'), ox.Literal(self.e(belief, t)))]
