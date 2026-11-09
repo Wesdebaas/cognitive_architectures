@@ -1,6 +1,8 @@
 # The score sheet for this world. Each setup describes the world or the request, never the system.
 # Each check is computed from a run's event log by testbed/score.py. Times are in seconds from 07:30, with 600 s per day hour.
 # predicted: what was expected of each policy, written before the first run; a wrong prediction stays and is reported.
+# A run can last several days, scored one day at a time (score.py --day); predictions are for the first day.
+# first_day_only: the row is about something told, and knowledge is told on the first day only.
 # Outcomes are PASS, FAIL or NA (the situation did not occur). There is no total: the rows are chosen.
 
 rows:
@@ -65,31 +67,38 @@ rows:
 
   # Knowledge added during the run
   - id: R1
+    first_day_only: true
     setup: "Told: an active goal also needs a new item, in a linked place"
     check: {type: counted, items: [knife_1], from: 50, to: 900}
     predicted: {am: FAIL, round_robin: FAIL}
   - id: R2
+    first_day_only: true
     setup: "Told: a new item no goal needs; later a goal needs it"
     check: {type: counted, items: [pan_1], from: 5700, to: 6600}
     predicted: {am: FAIL, round_robin: FAIL}
   - id: R3
+    first_day_only: true
     setup: "Told: a new goal; it then arrives"
     check: {type: counted, items: [pan_1, pot_1], from: 5700, to: 6600}
     predicted: {am: FAIL, round_robin: FAIL}
   - id: R4
+    first_day_only: true
     setup: "Told: a new place, and an item is in it"
     check: {type: seen, item: breakfast_plate_1, place: cupboard_4, from: 2100, to: 3300}
     predicted: {am: FAIL, round_robin: PASS}
   - id: R5
+    first_day_only: true
     setup: "Told: a new item the source links to no place, in a place nothing sends the robot to"
     check: {type: seen, item: wine_bottle_1, place: refrigerator_1, from: 6650, to: 7500}
     predicted: {am: FAIL, round_robin: PASS}
   - id: R6
+    first_day_only: true
     setup: "Told: a new item, in a place inspected just before it arrived"
     applies_if: {type: looked, place: drawer_1, from: 15, to: 45}
     check: {type: first_look, expect: drawer_1, from: 50, to: 900}
     predicted: {am: FAIL, round_robin: NA}
   - id: R8
+    first_day_only: true
     setup: "Told: a new item the robot already saw, and it has not moved"
     check: {type: known_at, t: 2700, item: spoon_1, place: table_1}
     predicted: {am: FAIL, round_robin: FAIL}

@@ -4,7 +4,9 @@ Each cell is PASS, FAIL or NA (the situation did not occur), then the seconds an
 row's window to that outcome. A cell marked ! differs from the prediction in the sheet. There is no total: the rows are
 chosen, so a sum would mean nothing.
 
-Run:  python3 score.py <score sheet> <events file> [<events file> ...]
+A run of several days is scored one day at a time; the default is the first day.
+
+Run:  python3 score.py <score sheet> [--day <n>] <events file> [<events file> ...]
 python3 score.py ../scenarios/household/worlds/day/score_sheet.yaml runs/household_day.events.jsonl runs/household_day_round_robin.events.jsonl
 """
 
@@ -99,15 +101,33 @@ def evaluate(events, check):
     return CHECKS[check['type']](events, check)
 
 
-def cell(events, policy, row):
-    """The text of one cell: outcome, seconds, inspections, and ! if the outcome was not predicted."""
+def one_day(events, day):
+    """The events of one day of a run, with times from that day's start, so a sheet written for one day applies."""
+    if day == 1 and 'day_length' not in events[0]:
+        return events
+    start = (day - 1) * events[0]['day_length']
+    shifted = []
+    for e in events:
+        if start <= e['t'] < start + events[0]['day_length'] or e['event'] == 'start':
+            e = dict(e, t=e['t'] - start if e['event'] != 'start' else 0)
+            if 'started' in e:
+                e['started'] -= start
+            shifted.append(e)
+    return shifted
+
+
+def cell(events, policy, row, day=1):
+    """The text of one cell: outcome, seconds, inspections, and ! if the outcome was not predicted. Predictions are for
+    the first day; a row about something told is scored on the first day only, as knowledge is told only then."""
     if row['check']['type'] == 'not_run':
         return f"not run ({row['check']['reason']})"
+    if day > 1 and row.get('first_day_only'):
+        return 'NA (told on day 1)'
     if 'applies_if' in row and evaluate(events, row['applies_if'])[0] != 'PASS':
         result, seconds, inspections = 'NA', None, None
     else:
         result, seconds, inspections = evaluate(events, row['check'])
-    mark = '' if row['predicted'].get(policy) == result else ' !'
+    mark = '' if day > 1 or row['predicted'].get(policy) == result else ' !'
     effort = '' if seconds is None else f' {seconds:g} s, {inspections} looks'
     return f'{result}{mark}{effort}'
 
@@ -120,19 +140,20 @@ def seconds_busy(events):
     return sum(e['t'] - e['started'] for e in events if e['event'] == 'look')
 
 
-def main(sheet_file, event_files):
+def main(sheet_file, event_files, day=1):
     with open(sheet_file) as f:
         sheet = yaml.safe_load(f)
     runs = []
     for file in event_files:
         events = load_events(file)
-        runs.append((events[0]['policy'], events))
+        runs.append((events[0]['policy'], one_day(events, day)))
 
+    print(f'Day {day}')
     print('| # | ' + ' | '.join(policy for policy, _ in runs) + ' | Setup |')
     print('|---|' + '---|' * len(runs) + '---|')
     wrong = []
     for row in sheet['rows']:
-        cells = [cell(events, policy, row) for policy, events in runs]
+        cells = [cell(events, policy, row, day) for policy, events in runs]
         print(f"| {row['id']} | " + ' | '.join(cells) + f" | {row['setup']} |")
         wrong += [f"{row['id']} {policy}: predicted {row['predicted'].get(policy)}, got {c.split()[0]}"
                   for (policy, _), c in zip(runs, cells) if ' !' in c]
@@ -145,4 +166,8 @@ def main(sheet_file, event_files):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2:])
+    arguments = sys.argv[2:]
+    chosen_day = 1
+    if arguments[:1] == ['--day']:
+        chosen_day, arguments = int(arguments[1]), arguments[2:]
+    main(sys.argv[1], arguments, chosen_day)

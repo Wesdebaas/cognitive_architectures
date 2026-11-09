@@ -101,8 +101,9 @@ class AwarenessManager:
         self.transition_cost = transition_cost
         self.parameters = parameters
         self.associated = {}   # word -> what the source associates with it; the source does not change during a run
-        self.observed = {}     # belief -> its last observation; only observe and tell change it, and both empty this
+        self.observed = {}     # belief -> its last observation; only observe and tell change it (forget)
         self.weights = {}      # (t, active goal) -> goal_weights; announce and derive empty this
+        self.needs = {}        # (claim, target) -> the beliefs there, their A and goals (terms); derive empties this
 
     def beliefs(self, goal):
         """{(item, place, claim): A} for every place the association source links to an item the goal needs."""
@@ -270,7 +271,7 @@ class AwarenessManager:
         self.knowledge.extend(wanted - present)
         self.actions = list(self.observed_by({}))
         self.types = self.action_types()
-        self.weights = {}
+        self.weights, self.needs = {}, {}
         after = self.a
         return (sorted(set(after) - set(before)), sorted(set(before) - set(after)),
                 sorted(b for b in after if b in before and after[b] != before[b]))
@@ -370,12 +371,13 @@ class AwarenessManager:
         quads = [(telling, ox.NamedNode(f'{RDF}type'), node('Telling')), (telling, node('t'), ox.Literal(t))]
         quads += [(telling, node('introduced'), node(item)) for item in introduced]
         self.knowledge.extend([ox.Quad(*quad, OBSERVATIONS) for quad in quads])
-        self.observed = {}
+        self.forget(items=set(introduced))
         return self.derive()
 
     def set_goal(self, goal):
-        """Make this goal the active one. Observations are kept: what was seen for one goal counts for the next."""
-        if goal not in self.prepared_goals:
+        """Make this goal the active one, or None for no active goal. Observations are kept: what was seen for one goal
+        counts for the next."""
+        if goal is not None and goal not in self.prepared_goals:
             raise ValueError(f'unknown goal {goal}')
         self.goal = goal
 
@@ -401,7 +403,7 @@ class AwarenessManager:
             if item in found:
                 quads.append((report, node('find'), ox.Literal(True)))
         self.knowledge.extend([ox.Quad(*quad, OBSERVATIONS) for quad in quads])
-        self.observed = {}
+        self.forget(place=target, items={item for item, reported in values.items() if reported is True})
         return self.derive() if found else ([], [], [])
 
     def last_observation(self, belief):
@@ -415,6 +417,12 @@ class AwarenessManager:
         if belief not in self.observed:
             self.observed[belief] = self.query_last_observation(belief)
         return self.observed[belief]
+
+    def forget(self, place=None, items=()):
+        """Drop the remembered last observations a new look or telling can change: every belief at the place (a look
+        there) and every belief of these items (seen there, so absent elsewhere; or introduced by a telling)."""
+        self.observed = {belief: seen for belief, seen in self.observed.items()
+                         if belief[1] != place and belief[0] not in items}
 
     def query_last_observation(self, belief):
         """last_observation, read from am:observations."""
@@ -520,15 +528,17 @@ class AwarenessManager:
         action_type, target = action
         claim = self.types[action_type][1]
         weights = self.goal_weights(t)
-        query = f'''SELECT ?item ?a ?goal WHERE {{ GRAPH <{DERIVED.value}> {{
-            ?belief <{RDF}reifies> <<( ?item <{AM}{claim}> <{AM}{target}> )>> ; <{AM}relevance> ?a ;
-                    <{AM}neededFor> ?goal }} }}'''
-        needs = {}
-        for row in self.knowledge.query(query):
-            a, goals = needs.setdefault(short(row['item']), (value(row['a']), set()))
-            goals.add(short(row['goal']))
+        if (claim, target) not in self.needs:
+            query = f'''SELECT ?item ?a ?goal WHERE {{ GRAPH <{DERIVED.value}> {{
+                ?belief <{RDF}reifies> <<( ?item <{AM}{claim}> <{AM}{target}> )>> ; <{AM}relevance> ?a ;
+                        <{AM}neededFor> ?goal }} }}'''
+            needs = {}
+            for row in self.knowledge.query(query):
+                a, goals = needs.setdefault(short(row['item']), (value(row['a']), set()))
+                goals.add(short(row['goal']))
+            self.needs[(claim, target)] = sorted(needs.items())
         found = []
-        for item, (a, goals) in sorted(needs.items()):
+        for item, (a, goals) in self.needs[(claim, target)]:
             weight = self.belief_weight(goals, weights)
             if weight > 0:
                 found.append((item, self.e((item, target, claim), t), a, weight))

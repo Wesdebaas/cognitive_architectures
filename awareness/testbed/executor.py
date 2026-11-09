@@ -1,7 +1,8 @@
 """Carries out an action in the testbed's world and reports what it saw. No ROS.
 
 The only code that reads the world files. The awareness manager never imports this: a real robot can replace it.
-The world starts as the world file says; the events file (optional) moves items during a run.
+The world starts as the world file says; the events file (optional) moves items during a run. A run of several days
+starts each day again from the world file (new_day).
 
 Run:  python3 executor.py <world file> <action type> <target>     (the world at t = 0)
 python3 executor.py ../scenarios/breakfast/worlds/d14/world.ttl inspect table_1
@@ -22,10 +23,26 @@ class Executor:
     def __init__(self, world_file, events_file=None):
         self.world = ox.Store()
         self.world.load(path=str(world_file), format=ox.RdfFormat.TURTLE)
-        self.events = []   # (t, item, place) not yet applied, in time order; place '' = at no place
+        self.start = self.locations()   # where every item is at t = 0, for the next day
+        self.script = []   # (t, item, place) from the events file, in time order; place '' = at no place
         if events_file is not None:
             with open(events_file) as f:
-                self.events = sorted((float(row['t']), row['item'], row['place']) for row in csv.DictReader(f))
+                self.script = sorted((float(row['t']), row['item'], row['place']) for row in csv.DictReader(f))
+        self.events = list(self.script)   # not yet applied
+
+    def new_day(self, offset):
+        """Put every item back where the world file says, and schedule the events file again, offset seconds later.
+        Returns the moves the reset made: (item, place), place '' = at no place."""
+        moves = []
+        for item in sorted(set(self.locations()) | set(self.start)):
+            place = self.start.get(item, '')
+            if self.locations().get(item, '') != place:
+                self.world.update(f'DELETE WHERE {{ <{AM}{item}> <{AM}isAt> ?place }}')
+                if place:
+                    self.world.update(f'INSERT DATA {{ <{AM}{item}> <{AM}isAt> <{AM}{place}> }}')
+                moves.append((item, place))
+        self.events += [(t + offset, item, place) for t, item, place in self.script]
+        return moves
 
     def advance(self, t):
         """Apply every event due at or before time t: the item leaves its place and goes to the event's place.

@@ -80,10 +80,12 @@ def read_settings(scenario):
 
 
 def clock(t, settings):
-    """The time of day at t seconds, as HH:MM."""
+    """The day of the run and the time of day at t seconds, as 'day N, HH:MM'. A day of the run starts at day_start, so
+    the night after midnight still belongs to the day before."""
     hours, minutes = settings['day_start'].split(':')
-    total = int(hours) * 60 + int(minutes) + int(t * 60 / settings['seconds_per_day_hour'])
-    return f'{total // 60:02d}:{total % 60:02d}'
+    day, minute = divmod(int(t * 60 / settings['seconds_per_day_hour']), 24 * 60)
+    now = (int(hours) * 60 + int(minutes) + minute) % (24 * 60)
+    return f'day {day + 1}, {now // 60:02d}:{now % 60:02d}'
 
 
 def build_steps(events):
@@ -116,6 +118,11 @@ def build_steps(events):
             if not event['known']:
                 arrived = event['goal']
             happened = f"goal arrives: {event['goal']}"
+        elif event['event'] == 'night':
+            goal = None
+            happened = 'night: no goal is active'
+        elif event['event'] == 'day':
+            happened = f"day {event['day']} starts"
         elif event['event'] == 'told':
             happened = f"told: {event['file']}, {len(event['added'])} beliefs added, {len(event['removed'])} removed"
         elif event['event'] == 'move':

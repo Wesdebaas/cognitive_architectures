@@ -3,6 +3,11 @@
 # Seconds one run lasts: 07:30 to 22:00 at 600 seconds per day hour. Chosen: 8700.
 run_length: 8700
 
+# Days in a run. A day is 24 day hours: run_length of goals, then night (no active goal) until the next day starts.
+# Each day the world starts again from world.ttl and repeats its events; the awareness manager keeps all it learned,
+# and knowledge is told only on the first day. Chosen: 3.
+days: 3
+
 # Where the robot is when the run starts.
 start_position: dock
 

@@ -19,11 +19,12 @@ from run import run
 
 SCENARIOS = Path(__file__).resolve().parent.parent / 'scenarios'
 
-# (scenario, world, policy, SHA-256 of the event log). Recorded with K, V, S and G: beliefs derived again after each
-# telling and each find; an item is present at one place at a time; announced goals are weighed before they arrive.
+# (scenario, world, policy, SHA-256 of the event log). Recorded with K, V, S and G over the scenario's three days:
+# beliefs derived again after each telling and each find; an item is present at one place at a time; announced goals
+# are weighed before they arrive.
 RECORDED = [
-    ('household', 'day', 'am', '00f1642d5de997b77ef3249af153d9a3b7c46989ad54c9965dcc4cb21e94569c'),
-    ('household', 'day', 'round_robin', '3d23199fe48e83b2b02cf9541d45ccabbc43d0cb07a155150ddfa37cb2d4726c'),
+    ('household', 'day', 'am', '8111f5c0bfb9f35b37283e4d103524ce1ae37374c187328b09fd18b8854c4806'),
+    ('household', 'day', 'round_robin', '72ce5fd5f2453ac58f809c6e28b1389c1600ca5adad02fd6885d33dbce2a1df2'),
 ]
 
 

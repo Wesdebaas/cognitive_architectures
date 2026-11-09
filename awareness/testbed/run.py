@@ -6,7 +6,12 @@ knowledge_events.csv (t,file: at time t the awareness manager is told this Turtl
 Only the testbed reads them. The awareness manager is told every goal arrival in advance, at the start (announce), and
 when each goal arrives; of the world it learns only by observing.
 
-Each tick: first knowledge is told if due (the awareness manager derives its beliefs again), then a goal arrives if
+A run lasts the scenario's number of days (testbed.yaml). A day is 24 day hours: goals arrive by goal_events.csv during
+its first run_length seconds, then it is night, with no active goal; overnight the world goes back to world.ttl and
+its events are scheduled again for the next day. Knowledge is told on the first day only, so it is kept, as the
+awareness manager keeps every observation.
+
+Each tick: first a night starts if due, then knowledge is told if due (the awareness manager derives its beliefs again), then a goal arrives if
 one is due, then the world changes if an event is due; then, if the running action has ended, the executor reports
 what it saw (the world at the end of the action) and the awareness manager stores it (a find derives its beliefs again);
 then, if anything was told, arrived or observed, whether the active goal is answered is logged when it changes; then, if
@@ -14,7 +19,7 @@ the robot is free, the policy decides. Actions are never interrupted.
 A goal the awareness manager does not know is logged and ignored: the previous goal stays active.
 
 The log, runs/<scenario>_<world>[_<policy>].events.jsonl, holds one JSON object per event (start, told, goal, move,
-look, answered, unanswered, decide): everything a replay or a score sheet needs.
+look, answered, unanswered, decide, night, day): everything a replay or a score sheet needs.
 
 Run:  python3 run.py <scenario folder> <world folder> [policy]     (policy: am, the default, or round_robin)
 python3 run.py ../scenarios/household ../scenarios/household/worlds/day
@@ -74,13 +79,16 @@ def options(am, t, position):
     return found
 
 
-def run(scenario, world, events_file, policy='am'):
+def run(scenario, world, events_file, policy='am', days=None):
     am = scenario.awareness_manager()
     am.prepare()
     executor = Executor(world / 'world.ttl', world / 'world_events.csv')
-    goals = goal_events(world / 'goal_events.csv')
-    told = knowledge_events(world / 'knowledge_events.csv')
     settings = scenario.testbed()
+    days = settings['days'] if days is None else days
+    day_length = 24 * settings['seconds_per_day_hour']
+    goals = [(day * day_length + t, goal) for day in range(days) for t, goal in goal_events(world / 'goal_events.csv')]
+    nights = [day * day_length + settings['run_length'] for day in range(days - 1)]   # the last day ends the run
+    told = knowledge_events(world / 'knowledge_events.csv')
     informed = policy == 'am'   # a baseline uses no beliefs and keeps no observations
     decider = am if informed else BASELINES[policy](am)
 
@@ -99,9 +107,24 @@ def run(scenario, world, events_file, policy='am'):
             am.announce(goal, arrival)
     event('start', 0, policy=policy, position=position, locations=executor.locations(),
           threshold=am.parameters['idle_threshold'], c=am.parameters['c'], beliefs=am.explanations(),
-          announced=[[goal, arrival] for arrival, goal in goals] if informed else [])
+          announced=[[goal, arrival] for arrival, goal in goals] if informed else [], days=days, day_length=day_length)
 
-    for t in range(settings['run_length'] + 1):
+    for t in range((days - 1) * day_length + settings['run_length'] + 1):
+        if t > 0 and t % day_length == 0:
+            print(f'{t:>4}  day {t // day_length + 1} starts')
+            event('day', t, day=t // day_length + 1)
+
+        if nights and nights[0] <= t:
+            nights.pop(0)
+            if informed:
+                am.set_goal(None)
+            print(f'{t:>4}  night: no goal is active')
+            event('night', t, held=held(am))
+            for item, place in executor.new_day(t - settings['run_length'] + day_length):
+                print(f'{t:>4}  world, overnight: {item} -> {place or "no place"}')
+                event('move', t, item=item, place=place)
+            news = True
+
         while told and told[0][0] <= t:
             name = told.pop(0)[1]
             added, removed, changed = am.tell((world / name).read_text(), t)
