@@ -1,0 +1,35 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+
+# The word a SOMA class is known by in ConceptNet. Written once for SOMA, used by every scenario.
+# Chosen: the class name in ConceptNet's spelling; no synonyms. Only the classes the scenarios use.
+am:word a owl:DatatypeProperty .
+
+SOMA:Plate          am:word "plate" .
+SOMA:BreakfastPlate am:word "breakfast_plate" .
+SOMA:Cup            am:word "cup" .
+SOMA:Table          am:word "table" .
+SOMA:Cupboard       am:word "cupboard" .
+SOMA:Dishwasher     am:word "dishwasher" .
+SOMA:Sink           am:word "sink" .
+SOMA:Drawer         am:word "drawer" .
+SOMA:Refrigerator   am:word "refrigerator" .
+SOMA:Oven           am:word "oven" .
+SOMA:Stove          am:word "stove" .
+SOMA:Countertop     am:word "countertop" .
+SOMA:CoffeeTable    am:word "coffee_table" .
+SOMA:Sofa           am:word "sofa" .
+SOMA:TableFork      am:word "table_fork" .
+SOMA:Fork           am:word "fork" .
+SOMA:PastaBowl      am:word "pasta_bowl" .
+SOMA:SaladBowl      am:word "salad_bowl" .
+SOMA:Bowl           am:word "bowl" .
+SOMA:WineGlass      am:word "wine_glass" .
+SOMA:Knife          am:word "knife" .
+SOMA:Spoon          am:word "spoon" .
+SOMA:Pan            am:word "pan" .
+SOMA:Pot            am:word "pot" .
+SOMA:WineBottle     am:word "wine_bottle" .
+SOMA:Bottle         am:word "bottle" .

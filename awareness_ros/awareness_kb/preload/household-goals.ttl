@@ -1,0 +1,27 @@
+@prefix dul:  <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#> .
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+
+am:breakfast a dul:Goal ;
+    am:requires am:breakfast_plate_present , am:cup_present , am:table_fork_present .
+
+am:coffee a dul:Goal ;
+    am:requires am:cup_present .
+
+am:lunch a dul:Goal ;
+    am:requires am:breakfast_plate_present , am:pasta_bowl_present .
+
+am:dinner a dul:Goal ;
+    am:requires am:pasta_bowl_present , am:table_fork_present , am:wine_glass_present .
+
+# Met by any salad bowl, so no instance is named: am:aboutClass instead of am:about.
+am:serve_salad a dul:Goal ;
+    am:requires am:a_salad_bowl_present .
+
+am:breakfast_plate_present a am:Condition ; am:about am:breakfast_plate_1 .
+am:cup_present             a am:Condition ; am:about am:cup_1 .
+am:table_fork_present      a am:Condition ; am:about am:table_fork_1 .
+am:pasta_bowl_present      a am:Condition ; am:about am:pasta_bowl_1 .
+am:wine_glass_present      a am:Condition ; am:about am:wine_glass_1 .
+am:a_salad_bowl_present    a am:Condition ; am:aboutClass SOMA:SaladBowl .

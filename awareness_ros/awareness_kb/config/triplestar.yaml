@@ -10,12 +10,11 @@ knowledge_base:
 
   # Turtle files to load from the preload/ directory at startup.
   preload_files:
-    - example_data.ttl
-
-# Run a Jinja2 SPARQL template whenever a message is received.
-insertion_subscribers:
-  - topic: "/detections"
-    template: "ExampleInsertion.sparql.tmpl"
+    - soma-home-2.1.0.ttl
+    - soma-conceptnet-mapping.ttl
+    - household-goals.ttl
+    - household-instances.ttl
+    - robot-action-types.ttl
 
 # Expose the latest topic value as a query-time SPARQL function.
 query_time_topic_subscribers:
