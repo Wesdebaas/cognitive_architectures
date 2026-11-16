@@ -5,7 +5,7 @@ repositories:
   triplestar_kb:
     type: git
     url: https://github.com/kas-lab/triplestar_kb.git
-    version: 2edd3d4b0af993bd27fac698df563e92a7653f54   # branch: main
+    version: 996853e16aedf796296185f6dfc50c5c19711d17   # branch: main
 
   yolo_ros:
     type: git
