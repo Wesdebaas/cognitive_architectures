@@ -1,127 +1,59 @@
 # cognitive_architectures
 
-Intro
+An awareness manager that decides what a household robot should look at next. MSc thesis, TU Delft.
 
-## Overview
+## Layout
 
-Goal of repo
+- `awareness/`: the awareness manager and a testbed that runs it without ROS
+- `awareness_replay/`: rqt panel to step through a testbed run
+- `awareness_ros/awareness_kb/`: TriplestarKB bringup with the household knowledge
+- `workspace.repos`: pinned third-party sources
 
-## Repository layout
+The earlier Gazebo system is kept at tag `gazebo-proof-of-concept`.
 
-Packages and descriptions
+## Setup
 
-## Prerequisites
-
-Ubuntu 24.04.4 LTS
-ROS Jazzy
-
-## Third-party dependencies
-
-See [`workspace.repos`](workspace.repos) for the pinned versions.
-
-## Reconstructing the workspace on a new machine
+Ubuntu 24.04, ROS 2 Jazzy.
 
 ```bash
-# 1. Create the workspace and clone this repo into src/
 mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
 git clone git@github.com:Wesdebaas/cognitive_architectures.git
-
-# 2. Import all pinned third-party sources listed in workspace.repos
 cd ~/ros2_ws
 vcs import src < src/cognitive_architectures/workspace.repos
 
-# 3. Install system/ROS dependencies
-rosdep install --from-paths src -y --ignore-src
+python3 -m venv --system-site-packages venv_cogarchs
+source venv_cogarchs/bin/activate
+pip install -r src/cognitive_architectures/requirements.txt
 
-# 4. Build
-colcon build
+rosdep install -r --from-paths src -y --ignore-src --skip-keys \
+  "python3-pyoxigraph-pip python3-reasonable-pip python3-oxrdflib-pip python3-opentelemetry-api-pip python3-opentelemetry-sdk-pip"
+python3 -m colcon build --symlink-install
 source install/setup.bash
 ```
 
-## Python virtual environment
+`--skip-keys` skips packages that `requirements.txt` already installs in the venv
 
-TriplestarKB and YOLO perception need Python packages that
-are **not** available from apt (`pydantic>=2`, `pyoxigraph`, `reasonable`,
-and the CPU build of `torch`/`ultralytics`). They live in a virtual environment, `venv_cogarchs`, created with `--system-site-packages` so the ROS packages remain importable.
+## Run
 
-```bash
-source ~/ros2_ws/venv_cogarchs/bin/activate
-```
-
-## Running
-
-Each terminal first sources the workspace (`source ~/ros2_ws/install/setup.bash`, already in `~/.bashrc` here).
-
-**Terminal 1 — simulation + perception** (Gazebo, the robot, and the YOLO
-pipeline):
+From `src/cognitive_architectures`:
 
 ```bash
-ros2 launch cognitive_nav mirte_house.launch.py
+python3 awareness/testbed/run.py awareness/scenarios/household awareness/scenarios/household/worlds/day
+python3 awareness/testbed/regression.py
+ros2 launch awareness/testbed/visualization/replay.launch.py scenario:=household run:=household_day
 ```
 
-Control-C sometimes leaves a gazebo server running. Find/kill it with:
+Knowledge base:
 
 ```bash
-pgrep -af "gz sim" ; pkill -9 -f "gz sim"
+ros2 triplestar bringup launch awareness_kb
+ros2 triplestar query call count_triples 
 ```
 
-**Terminal 2 — knowledge base** (TriplestarKB with the room-recognition config):
+## SOMA
 
-Wait until YOLO is publishing before starting the KB, otherwise the KB's 2 s
-message-type autodetect times out and silently drops the detection subscriber.
+`soma-home-2.1.0.ttl` is SOMA-HOME merged with its imports into one Turtle file, made with the ontology tool [ROBOT](https://robot.obolibrary.org):
 
-```bash
-ros2 launch room_recognition room_recognition_triplestar.launch.xml
-```
-
-
-**Terminal 3 — belief node** (polls the KB and maintains room beliefs):
-
-```bash
-ros2 run cognitive_nav knowledge_management_node --ros-args -p use_sim_time:=true
-```
-
-
-**Terminal 4 — teleop** (optional):
-
-```bash
-ros2 run teleop_twist_keyboard teleop_twist_keyboard
-```
-
-############ Scenario 2
-
-Uses its own world and robot description to decrease computational load of simulation, both in `goal_awareness_scenario`:
-
-- `worlds/scenario_house.world` — `max_step_size` 0.005 -> 0.01
-- `urdf/scenario_mirte_master.xacro` — depth camera 60 Hz -> 5 Hz
-
-Together these take the real-time factor from ~0.65 to >0.95. Physics was 60% of Gazebo's single-threaded loop.
-
-**Terminal 1 — simulation:**
-
-```bash
-ros2 launch cognitive_nav mirte_house.launch.py \
-  world:=$(ros2 pkg prefix goal_awareness_scenario)/share/goal_awareness_scenario/worlds/scenario_house.world \
-  robot_xacro_path:=$(ros2 pkg prefix goal_awareness_scenario)/share/goal_awareness_scenario/urdf/scenario_mirte_master.xacro
-```
-
-**Terminal 2 — navigation:**
-
-```bash
-ros2 launch goal_awareness_scenario navigation.launch.py
-```
-
-**Terminal 3 — travel time measurement** (drives every ordered pair of stations, 3 samples each):
-
-```bash
-ros2 run goal_awareness_scenario travel_time_tour --ros-args -p use_sim_time:=true
-```
-
-`use_sim_time` is required, durations are read off the simulation clock. Every leg is appended to `goal_awareness_scenario/results/travel_times.csv` and saved to disk immediately, so if anything crashes you rerun the identical command and it resumes from what is already in the file. Options: `--repeats`, `--output`, `--waypoints`,
-`--max-legs`.
-
-
-Command to generate turtle file from SOMA owl files
 ```bash
 java -jar ~/tools/robot/robot.jar merge \
   --catalog ~/ros2_ws/src/soma/owl/catalog-v001.xml \

@@ -1,0 +1,6 @@
+# Python packages for the venv that apt does not provide. 
+pyoxigraph==0.5.9
+reasonable==0.4.4
+oxrdflib==0.5.0
+rdflib==7.6.0
+opentelemetry-api==1.45.2
