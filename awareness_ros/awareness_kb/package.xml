@@ -11,6 +11,7 @@
   <buildtool_depend>ament_index_python</buildtool_depend>
 
   <exec_depend>triplestar_bringup</exec_depend>
+  <exec_depend>awareness_msgs</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

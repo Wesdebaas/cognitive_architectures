@@ -1,0 +1,12 @@
+# Every observation with its target and time, and each item it reported with the claim's value and whether it was a find.
+PREFIX am: <http://example.org/awareness-manager#>
+
+SELECT ?observation ?target ?t ?item ?value ?find
+WHERE {
+  GRAPH am:observations {
+    ?observation a am:Observation ; am:target ?target ; am:t ?t ; am:reported ?report .
+    ?report am:item ?item ; am:value ?value .
+    OPTIONAL { ?report am:find ?find }
+  }
+}
+ORDER BY ?t ?observation ?item

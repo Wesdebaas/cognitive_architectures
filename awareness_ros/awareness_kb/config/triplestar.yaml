@@ -16,6 +16,11 @@ knowledge_base:
     - household-instances.ttl
     - robot-action-types.ttl
 
+# Run a Jinja2 SPARQL template whenever a message is received.
+insertion_subscribers:
+  - topic: "/awareness/observations"
+    template: "insert-observation.sparql.tmpl"
+
 # Expose the latest topic value as a query-time SPARQL function.
 query_time_topic_subscribers:
   - topic: "/clock"
@@ -32,3 +37,6 @@ query_services:
 
   - query_file: "get_all_triples.sparql"
     service_name: "all_triples"
+
+  - query_file: "observations.sparql"
+    service_name: "observations"

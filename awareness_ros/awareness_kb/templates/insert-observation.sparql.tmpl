@@ -1,0 +1,14 @@
+PREFIX am: <http://example.org/awareness-manager#>
+
+INSERT DATA { GRAPH am:observations {
+  am:observation_{{ msg.number }} a am:Observation ;
+      am:action am:{{ msg.action }} ;
+      am:target am:{{ msg.target }} ;
+      am:claim {{ msg.claim | rdf }} ;
+      am:t {{ msg.t | rdf }} ;
+      am:complete {{ msg.complete | rdf }} .
+  {% for report in msg.reported %}
+  am:observation_{{ msg.number }} am:reported _:report{{ loop.index }} .
+  _:report{{ loop.index }} am:item am:{{ report.item }} ; am:value {{ report.value | rdf }}{% if report.find %} ; am:find true{% endif %} .
+  {% endfor %}
+} }
