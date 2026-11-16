@@ -4,6 +4,7 @@
 
 # A new goal: cooking needs the pan told earlier and a new pot.
 am:pot_1 a am:Item , SOMA:Pot .
+am:pot_1 am:persistence 450 .   # seconds; used once a day (see things.ttl)
 am:pan_present a am:Condition ; am:about am:pan_1 .
 am:pot_present a am:Condition ; am:about am:pot_1 .
 am:cook a dul:Goal ;
