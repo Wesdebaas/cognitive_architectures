@@ -1,0 +1,35 @@
+knowledge_base:
+  # Where on the system to persist the Oxigraph store folder.
+  store_path: "/tmp/awareness_kb"
+
+  # Base IRI for resolving relative IRIs and functions in the KB.
+  base_iri: "http://triplestar.local"
+
+  # Whether to clear the store at startup.
+  clear_on_startup: true
+
+  # Turtle files to load from the preload/ directory at startup.
+  preload_files:
+    - example_data.ttl
+
+# Run a Jinja2 SPARQL template whenever a message is received.
+insertion_subscribers:
+  - topic: "/detections"
+    template: "ExampleInsertion.sparql.tmpl"
+
+# Expose the latest topic value as a query-time SPARQL function.
+query_time_topic_subscribers:
+  - topic: "/clock"
+    sparql_fn_name: "rosTime"
+    target_msg_field: "clock"
+
+# TF positions are available without configuration through
+# qt:tfPosition(frame, referenceFrame).
+
+# Create ROS services backed by files from the queries/ directory.
+query_services:
+  - query_file: "count_triples.sparql"
+    service_name: "count_triples"
+
+  - query_file: "get_all_triples.sparql"
+    service_name: "all_triples"

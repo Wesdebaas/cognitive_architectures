@@ -1,0 +1,12 @@
+# Example SPARQL query: get the base_link origin in the map frame.
+# Usage: ros2 run triplestar_core query_kb get_robot_pose.sparql
+
+PREFIX ex: <http://example.org/>
+PREFIX qt: <http://triplestar.local/query-time/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT ?robot ?pose
+WHERE {
+  ?robot rdf:type ex:Robot .
+  BIND(qt:tfPosition("base_link", "map") AS ?pose)
+}
