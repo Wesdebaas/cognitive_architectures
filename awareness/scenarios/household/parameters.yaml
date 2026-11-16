@@ -1,6 +1,6 @@
-# Seconds after which a belief is fully stale: E = min(1, dt / T).
-# Chosen: hand-set, one value for every item, also for items told during a run, so differences in how often items
-# are checked do not come from T.
+# Persistence, in seconds, of an item the knowledge gives no am:persistence: the average time it stays where it is.
+# Staleness E = 1 - e^(-dt / persistence). An item's own am:persistence (in its Turtle) replaces this value.
+# Chosen: hand-set, 300.
 T: 300
 
 # Relevance from w votes: A = 1 - e^(c*w), with c < 0.

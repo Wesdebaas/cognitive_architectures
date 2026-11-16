@@ -10,7 +10,7 @@ gives it everything it uses. No ROS.
                    an action type observes the beliefs whose claim it declares.
   transition_cost  (from, to) -> seconds to get into position for an action at `to`, or None if impossible.
                    Travel time for a driving robot, turning time for a pan-tilt camera, 0 for a fixed sensor.
-  parameters       {'T': seconds until a belief is fully stale, 'idle_threshold': P below which nothing is done,
+  parameters       {'T': persistence of an item the knowledge gives none (see e), 'idle_threshold': P below which nothing is done,
                     'c': see support, 'alpha': see discount, 'find_votes': see derivations,
                     'horizon_halflife': see goal_weights}
 
@@ -271,6 +271,7 @@ class AwarenessManager:
         self.knowledge.extend(wanted - present)
         self.actions = list(self.observed_by({}))
         self.types = self.action_types()
+        self.persistences = self.declared_persistences()
         self.weights, self.needs = {}, {}
         after = self.a
         return (sorted(set(after) - set(before)), sorted(set(before) - set(after)),
@@ -487,12 +488,24 @@ class AwarenessManager:
                     for row in self.knowledge.query(query)]
         return sorted(sighting for sighting in reported if sighting[1:4] not in beliefs)
 
+    def declared_persistences(self):
+        """{item: seconds} for every item the knowledge gives an am:persistence."""
+        query = f'SELECT ?item ?seconds WHERE {{ ?item <{AM}persistence> ?seconds }}'
+        return {short(row['item']): float(row['seconds'].value) for row in self.knowledge.query(query)}
+
+    def persistence(self, item):
+        """The average seconds the item stays where it is: its am:persistence, or T if the knowledge gives none.
+        One value for the item at every place."""
+        return self.persistences.get(item, self.parameters['T'])
+
     def e(self, belief, t):
-        """Staleness, linear: 0 just after an observation, 1 after T seconds or if never observed."""
+        """Staleness, the probability that the belief's last observation no longer holds (Toris and Chernova 2017, Eq. 2):
+        E = 1 - e^(-dt / mu), dt the seconds since that observation, mu the item's persistence. 0 just after an
+        observation, approaching 1 as dt grows; 1 if never observed."""
         observation = self.last_observation(belief)
         if observation is None:
             return 1.0
-        return min(1.0, (t - observation[0]) / self.parameters['T'])
+        return 1 - math.exp(-(t - observation[0]) / self.persistence(belief[0]))
 
     def announce(self, goal, t):
         """Store that the goal will arrive at time t: one am:Announcement in am:observations. Arrivals are given, not

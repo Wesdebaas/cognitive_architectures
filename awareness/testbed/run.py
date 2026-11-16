@@ -73,7 +73,7 @@ def options(am, t, position):
         for item, e, a, weight in am.terms((action_type, target), t):
             observation = am.last_observation((item, target, claim))
             beliefs.append({'item': item, 'observed': observation[0] if observation else None,
-                            'T': am.parameters['T'], 'E': round(e, 4), 'A': round(a, 4), 'weight': round(weight, 4)})
+                            'T': am.persistence(item), 'E': round(e, 4), 'A': round(a, 4), 'weight': round(weight, 4)})
         found.append({'type': action_type, 'target': target, 'P': round(p, 4), 'C': c,
                       'U': None if c is None else round(p / c, 4), 'beliefs': beliefs})
     return found
