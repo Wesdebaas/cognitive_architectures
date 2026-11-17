@@ -21,5 +21,6 @@ setup(
     ] + scenario_files('household'),
     install_requires=['setuptools'],
     zip_safe=True,
-    entry_points={'console_scripts': [f'world = {package_name}.world:main']},
+    entry_points={'console_scripts': [f'world = {package_name}.world:main',
+                                    f'executor = {package_name}.executor:main']},
 )
