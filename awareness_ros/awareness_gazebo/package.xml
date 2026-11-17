@@ -10,6 +10,7 @@
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>awareness_kb</exec_depend>
   <exec_depend>awareness_msgs</exec_depend>
+  <exec_depend>awareness_node</exec_depend>
   <exec_depend>awareness_scenario</exec_depend>
   <exec_depend>aws_robomaker_small_house_world</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>

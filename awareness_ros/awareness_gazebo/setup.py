@@ -9,7 +9,7 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages', [f'resource/{package_name}']),
         (f'share/{package_name}', ['package.xml']),
-        (f'share/{package_name}/launch', ['launch/gazebo.launch.py']),
+        (f'share/{package_name}/launch', ['launch/gazebo.launch.py', 'launch/run.launch.py']),
         (f'share/{package_name}/config', ['config/nav2_params.yaml']),
     ],
     install_requires=['setuptools'],

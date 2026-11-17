@@ -3,12 +3,23 @@
 ros2 launch awareness_gazebo gazebo.launch.py [gui:=false]
 """
 
+import subprocess
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, RegisterEventHandler
+from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+
+
+def stop_gazebo(context):
+    """Gazebo's simulator outlives a launch that shuts itself down, so stop it explicitly. A launch starts no new
+    process while shutting down, so this runs inside it."""
+    subprocess.run(['pkill', '-f', 'gz sim -r .*small_house.world'])
+    return []
+
 
 NAV2 = [('nav2_planner', 'planner_server'), ('nav2_controller', 'controller_server'),
         ('nav2_behaviors', 'behavior_server'), ('nav2_bt_navigator', 'bt_navigator')]
@@ -38,6 +49,7 @@ def generate_launch_description():
             'yaml_filename': PathJoinSubstitution([house, 'maps', 'turtlebot3_waffle_pi', 'map.yaml'])}]),
         *[Node(package=package, executable=executable, name=executable, parameters=[params, sim_time], remappings=odometry)
           for package, executable in NAV2],
+        RegisterEventHandler(OnShutdown(on_shutdown=[OpaqueFunction(function=stop_gazebo)])),
         Node(package='nav2_lifecycle_manager', executable='lifecycle_manager', name='lifecycle_manager_navigation',
              parameters=[sim_time, {'autostart': True, 'node_names': ['map_server'] + [name for _, name in NAV2]}]),
     ])
