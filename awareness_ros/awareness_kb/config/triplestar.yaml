@@ -8,12 +8,11 @@ knowledge_base:
   # Whether to clear the store at startup.
   clear_on_startup: true
 
-  # Turtle files to load from the preload/ directory at startup.
+  # Turtle files to load from the preload/ directory at startup: knowledge every scenario shares. A scenario asserts
+  # its own goals and instances when its run starts.
   preload_files:
     - soma-home-2.1.0.ttl
     - soma-conceptnet-mapping.ttl
-    - household-goals.ttl
-    - household-instances.ttl
     - robot-action-types.ttl
 
 # Run a Jinja2 SPARQL template whenever a message is received.

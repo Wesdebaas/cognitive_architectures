@@ -26,9 +26,10 @@ class AwarenessNode(Node):
         claim = self.declare_parameter('claim', 'present').value
         self.position = self.declare_parameter('start_position', 'dock').value
         self.speed = self.declare_parameter('speed', 0.5).value   # metres per second. Chosen: 0.5
+        places = self.declare_parameter('places', '').value   # the scenario's places.csv: where each target is
         with open(share / 'config' / 'parameters.yaml') as f:
             parameters = yaml.safe_load(f)
-        with open(share / 'config' / 'places.csv') as f:
+        with open(places) as f:
             self.coordinates = {row['place']: (float(row['x']), float(row['y'])) for row in csv.DictReader(f)}
         association = partial(conceptnet.located_at, path=share / 'data' / conceptnet.FILE)
         self.am = AwarenessManager(KBClient(), association, claim, self.travel_time, parameters)

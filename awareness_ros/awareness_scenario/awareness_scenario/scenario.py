@@ -1,4 +1,5 @@
-"""The day's script: announces every goal arrival, then sets goals, asserts knowledge and starts nights on time."""
+"""The day's script: asserts the scenario's knowledge and announces every goal arrival, then sets goals, asserts
+knowledge and starts nights on time."""
 
 import csv
 from pathlib import Path
@@ -27,6 +28,7 @@ class ScenarioNode(Node):
             goals = [(float(row['t']), row['goal']) for row in csv.DictReader(f)]
         with open(self.folder / 'knowledge_events.csv') as f:
             assertions = [(float(row['t']), row['file']) for row in csv.DictReader(f)]
+        self.knowledge = run['knowledge']   # this scenario's own goals and instances, asserted first
         day, days = 24 * run['seconds_per_day_hour'], run['days']
         # (t, what comes first, kind, value): goals every day, knowledge on the first day only, a night after every
         # day but the last, and the end of the run.
@@ -52,6 +54,8 @@ class ScenarioNode(Node):
         if not self.announced:
             for client in (self.set_goal, self.announce, self.assert_knowledge):
                 client.wait_for_service()
+            for name in self.knowledge:
+                self.call_assert_knowledge(self.folder.parent / name)
             for arrival, goal in self.arrivals:
                 self.announce.call(Announce.Request(goal=goal, arrival=arrival))
             self.get_logger().info(f'announced {len(self.arrivals)} goal arrivals')
@@ -61,13 +65,16 @@ class ScenarioNode(Node):
             if kind == NIGHT:
                 self.call_set_goal('')
             elif kind == ASSERTION:
-                answer = self.assert_knowledge.call(AssertKnowledge.Request(turtle=(self.folder / value).read_text()))
-                self.get_logger().info(f'asserted {value}' if answer.success else f'{value} refused: {answer.message}')
+                self.call_assert_knowledge(self.folder / value)
             elif kind == GOAL:
                 self.call_set_goal(value)
             else:
                 self.get_logger().info('run over')
                 self.done = True
+
+    def call_assert_knowledge(self, path):
+        answer = self.assert_knowledge.call(AssertKnowledge.Request(turtle=path.read_text()))
+        self.get_logger().info(f'asserted {path.name}' if answer.success else f'{path.name} refused: {answer.message}')
 
     def call_set_goal(self, goal):
         answer = self.set_goal.call(SetGoal.Request(goal=goal))
