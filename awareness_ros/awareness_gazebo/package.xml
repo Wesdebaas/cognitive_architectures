@@ -7,6 +7,10 @@
   <maintainer email="wremmelzwaan@tudelft.nl">Wessel Remmelzwaan</maintainer>
   <license>TODO: License declaration</license>
 
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>awareness_kb</exec_depend>
+  <exec_depend>awareness_msgs</exec_depend>
+  <exec_depend>awareness_scenario</exec_depend>
   <exec_depend>aws_robomaker_small_house_world</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>launch</exec_depend>
@@ -17,6 +21,7 @@
   <exec_depend>nav2_controller</exec_depend>
   <exec_depend>nav2_lifecycle_manager</exec_depend>
   <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_msgs</exec_depend>
   <exec_depend>nav2_planner</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>

@@ -14,5 +14,6 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    entry_points={'console_scripts': [f'localization = {package_name}.localization:main']},
+    entry_points={'console_scripts': [f'localization = {package_name}.localization:main',
+                                    f'executor = {package_name}.executor:main']},
 )
