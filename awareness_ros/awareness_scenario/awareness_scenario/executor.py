@@ -6,6 +6,7 @@ duration. So a run without Gazebo can be compared with the testbed.
 
 import csv
 import math
+import time
 from pathlib import Path
 
 import pyoxigraph as ox
@@ -58,7 +59,12 @@ class ExecutorNode(Node):
             handle.abort()
             return Execute.Result(success=False)
         self.get_logger().info(f'{action_type} {target}: {seconds:g} s')
-        self.get_clock().sleep_for(Duration(seconds=seconds))
+        end = self.get_clock().now() + Duration(seconds=seconds)
+        while self.get_clock().now() < end:   # checks every 10 ms, so a shutdown is noticed while waiting
+            if not rclpy.ok():
+                handle.abort()
+                return Execute.Result(success=False)
+            time.sleep(0.01)
         items = self.inspect.call(Inspect.Request(target=target)).items
         self.position = target
         handle.succeed()
