@@ -1,0 +1,8 @@
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+# Breakfast also needs a knife.
+am:knife_1 a am:Item , SOMA:Knife .
+am:knife_1 am:persistence 300 .   # seconds; used at a meal (see things.ttl)
+am:knife_present a am:Condition ; am:about am:knife_1 .
+am:breakfast am:requires am:knife_present .
