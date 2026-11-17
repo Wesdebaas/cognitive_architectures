@@ -24,6 +24,9 @@ insertion_subscribers:
   - topic: "/awareness/announcements"
     template: "insert-announcement.sparql.tmpl"
 
+  - topic: "/awareness/assertions"
+    template: "insert-assertion.sparql.tmpl"
+
 # Expose the latest topic value as a query-time SPARQL function.
 query_time_topic_subscribers:
   - topic: "/clock"

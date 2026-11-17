@@ -1,0 +1,12 @@
+PREFIX am: <http://example.org/awareness-manager#>
+
+INSERT DATA {
+  {{ msg.triples }}
+  GRAPH am:observations {
+    am:assertion_{{ msg.number }} a am:Assertion ;
+        am:t {{ msg.t | rdf }} .
+    {% for item in msg.introduced %}
+    am:assertion_{{ msg.number }} am:introduced am:{{ item }} .
+    {% endfor %}
+  }
+}
