@@ -1,0 +1,26 @@
+# Persistence, in seconds, of an item the knowledge gives no am:persistence: the average time it stays where it is.
+# Staleness E = 1 - e^(-dt / persistence). An item's own am:persistence (in its Turtle) replaces this value.
+# Chosen: hand-set, 300.
+T: 300
+
+# Relevance from w votes: A = 1 - e^(c*w), with c < 0.
+# c = ln 0.9, so one vote gives A = 0.1. Chosen: 0.9.
+c: -0.10536
+
+# Votes borrowed from a parent class count as A = (1 - alpha) (1 - e^(c*w)), however many steps up.
+# Chosen: 0.5.
+alpha: 0.5
+
+# Finding an item at a place counts as this many votes of the source for that place: A_finds = 1 - e^(c * find_votes * n)
+# after n finds. 10 gives A_finds = 0.65 after one find, more than ConceptNet gives any belief in this house (at most
+# 0.47, the knife in a drawer), because the robot saw this very item there, while ConceptNet speaks about the word.
+# Chosen: 10.
+find_votes: 10
+
+# An announced goal that has not arrived yet counts 2^(-dt / horizon_halflife) times, dt seconds before its arrival:
+# half at this many seconds ahead. Chosen: 300.
+horizon_halflife: 300
+
+# Only actions with P at or above this value are considered; none -> the robot idles.
+# Chosen: 0.2.
+idle_threshold: 0.2

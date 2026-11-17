@@ -5,6 +5,7 @@ import time
 import pyoxigraph as ox
 import rclpy
 from awareness_msgs.msg import Announcement, Assertion, Beliefs, Decision, Observation
+from rclpy.executors import SingleThreadedExecutor
 from triplestar_msgs.srv import SPARQLQuery
 
 AM = 'http://example.org/awareness-manager#'
@@ -48,22 +49,26 @@ def stored(name, graph=OBSERVATIONS):
 
 class KBClient:
 
-    def __init__(self, timeout=10.0):
-        self.timeout = timeout
-        # Own node, so it can be called from another node's callback.
+    def __init__(self, timeout=10.0, startup=60.0):
+        """Waits up to startup seconds for the KB to start, then up to timeout seconds for each answer."""
+        self.timeout = startup
+        # Own node and executor, so it can wait for the KB inside another node's callback.
         self.node = rclpy.create_node('kb_client')
+        self.waiter = SingleThreadedExecutor()
+        self.waiter.add_node(self.node)
         self.publishers = {kind: self.node.create_publisher(kind, topic, 10) for kind, topic in TOPICS.items()}
         self.client = self.node.create_client(SPARQLQuery, SERVICE)
-        if not self.client.wait_for_service(timeout_sec=timeout):
+        if not self.client.wait_for_service(timeout_sec=startup):
             raise RuntimeError(f'{SERVICE} is not available: is the KB running?')
         for kind, publisher in self.publishers.items():
             self.wait(lambda: publisher.get_subscription_count() > 0,
                       f'the KB does not listen on {TOPICS[kind]}: start it after this node')
+        self.timeout = timeout
 
     def query(self, sparql):
         """Answers as from pyoxigraph's Store.query. SELECT only: an ASK crashes the KB."""
         future = self.client.call_async(SPARQLQuery.Request(query=sparql, reasoning=False))
-        rclpy.spin_until_future_complete(self.node, future, timeout_sec=self.timeout)
+        self.waiter.spin_until_future_complete(future, timeout_sec=self.timeout)
         response = future.result()
         if response is None:
             raise RuntimeError(f'the KB did not answer within {self.timeout} s')
