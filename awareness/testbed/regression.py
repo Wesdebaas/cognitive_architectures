@@ -21,9 +21,9 @@ SCENARIOS = Path(__file__).resolve().parent.parent / 'scenarios'
 
 # (scenario, world, policy, SHA-256 of the event log). Recorded with K, V, S and G over the scenario's three days:
 # beliefs derived again after each telling and each find; an item is present at one place at a time; announced goals
-# are weighed before they arrive.
+# are weighed before they arrive; staleness E = 1 - e^(-dt / persistence), with am:persistence per item.
 RECORDED = [
-    ('household', 'day', 'am', '8111f5c0bfb9f35b37283e4d103524ce1ae37374c187328b09fd18b8854c4806'),
+    ('household', 'day', 'am', '58b98d68ee477b7f71eb2cb27447469d6ce087b723c06492c4b594ab2e406f02'),
     ('household', 'day', 'round_robin', '72ce5fd5f2453ac58f809c6e28b1389c1600ca5adad02fd6885d33dbce2a1df2'),
 ]
 

@@ -1,3 +1,6 @@
 __pycache__
 *.drawio
 awareness/testbed/runs/
+build/
+install/
+log/
