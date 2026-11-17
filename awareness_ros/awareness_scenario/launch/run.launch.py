@@ -18,8 +18,9 @@ def generate_launch_description():
     scenario = LaunchConfiguration('scenario')
     world = PathJoinSubstitution([scenario, LaunchConfiguration('world')])
     places = PathJoinSubstitution([FindPackageShare('awareness_scenario'), scenario, 'places.csv'])
+    robot = PathJoinSubstitution([FindPackageShare('awareness_scenario'), scenario, 'robot.yaml'])
     sim_time = {'use_sim_time': True}
-    am = Node(package='awareness_node', executable='awareness_node', parameters=[sim_time, {'places': places}])
+    am = Node(package='awareness_node', executable='awareness_node', parameters=[sim_time, robot, {'places': places}])
     kb = IncludeLaunchDescription(AnyLaunchDescriptionSource(
         PathJoinSubstitution([FindPackageShare('awareness_kb'), 'launch', 'bringup.launch.xml'])))
     run = Node(package='awareness_scenario', executable='scenario', parameters=[sim_time, {'world': world}])
@@ -31,7 +32,7 @@ def generate_launch_description():
         # The KB listens only to topics that have a publisher when it starts, so it starts after the AM node.
         RegisterEventHandler(OnProcessStart(target_action=am, on_start=[kb])),
         Node(package='awareness_scenario', executable='world', parameters=[sim_time, {'world': world}]),
-        Node(package='awareness_scenario', executable='executor', parameters=[sim_time, {'scenario': scenario}]),
+        Node(package='awareness_scenario', executable='executor', parameters=[sim_time, robot, {'scenario': scenario}]),
         run,
         Node(package='awareness_scenario', executable='clock', parameters=[{'speed': LaunchConfiguration('speed')}]),
         RegisterEventHandler(OnProcessExit(target_action=run, on_exit=[EmitEvent(event=Shutdown(reason='run over'))])),

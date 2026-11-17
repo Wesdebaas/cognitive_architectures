@@ -1,0 +1,6 @@
+# mirte in the AWS small house, for the AM node and the executor.
+/**:
+  ros__parameters:
+    start_position: dock
+    # Metres per second the AM assumes. Chosen: 0.2, what Nav2 drives in this house, turning included (0.12-0.26).
+    speed: 0.2

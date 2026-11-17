@@ -1,0 +1,22 @@
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+
+# The places where the robot can look: the kitchen of the AWS small house, and the TV cabinet in its living room as a
+# second, far cupboard.
+am:table_1        a am:Place , SOMA:Table .
+am:cupboard_1     a am:Place , SOMA:Cupboard .
+am:refrigerator_1 a am:Place , SOMA:Refrigerator .
+am:cupboard_2     a am:Place , SOMA:Cupboard .
+
+# The items the goals need.
+am:cup_1        a am:Item , SOMA:Cup .
+am:plate_1      a am:Item , SOMA:Plate .
+am:bowl_1       a am:Item , SOMA:Bowl .
+am:wine_glass_1 a am:Item , SOMA:WineGlass .
+
+# Seconds each item stays where it is, short to fit an 8-minute day. Chosen: hand-set.
+am:cup_1        am:persistence 60 .
+am:plate_1      am:persistence 180 .
+am:bowl_1       am:persistence 180 .
+am:wine_glass_1 am:persistence 120 .

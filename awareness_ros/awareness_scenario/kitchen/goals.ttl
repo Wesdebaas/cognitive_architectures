@@ -1,0 +1,17 @@
+@prefix dul:  <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+
+am:breakfast a dul:Goal ;
+    am:requires am:cup_present , am:plate_present .
+
+am:coffee a dul:Goal ;
+    am:requires am:cup_present .
+
+am:dinner a dul:Goal ;
+    am:requires am:plate_present , am:bowl_present , am:wine_glass_present .
+
+am:cup_present        a am:Condition ; am:about am:cup_1 .
+am:plate_present      a am:Condition ; am:about am:plate_1 .
+am:bowl_present       a am:Condition ; am:about am:bowl_1 .
+am:wine_glass_present a am:Condition ; am:about am:wine_glass_1 .

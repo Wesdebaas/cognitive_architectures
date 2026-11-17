@@ -1,0 +1,6 @@
+# The household's robot, for the AM node and the executor.
+/**:
+  ros__parameters:
+    start_position: dock
+    # Metres per second the AM assumes. Chosen: 0.5.
+    speed: 0.5

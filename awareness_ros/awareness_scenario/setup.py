@@ -19,7 +19,7 @@ setup(
         ('share/ament_index/resource_index/packages', [f'resource/{package_name}']),
         (f'share/{package_name}', ['package.xml']),
         (f'share/{package_name}/launch', ['launch/run.launch.py']),
-    ] + scenario_files('household'),
+    ] + scenario_files('household') + scenario_files('kitchen'),
     install_requires=['setuptools'],
     zip_safe=True,
     entry_points={'console_scripts': [f'world = {package_name}.world:main',

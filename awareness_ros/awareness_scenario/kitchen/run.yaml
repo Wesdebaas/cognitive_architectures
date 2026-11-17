@@ -1,0 +1,13 @@
+# Settings for a run in this scenario. Read by the scenario and world nodes, never by the awareness manager.
+
+# Seconds one run lasts. The first goal comes at 90 s, so Gazebo, Nav2 and the KB can start first. Chosen: 480.
+run_length: 480
+
+# Days in a run. Chosen: 1.
+days: 1
+
+# Seconds per day hour: a day is 24 of them, longer than the run. Chosen: 60.
+seconds_per_day_hour: 60
+
+# This scenario's own knowledge, asserted when the run starts, in this order.
+knowledge: [goals.ttl, instances.ttl]

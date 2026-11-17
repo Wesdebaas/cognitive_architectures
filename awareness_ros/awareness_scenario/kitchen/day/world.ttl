@@ -1,0 +1,10 @@
+@prefix am: <http://example.org/awareness-manager#> .
+
+# Where every item really is at t = 0; world_events.csv changes it. Only the world node reads this file.
+# Chosen: by hand, so that each goal shows something: the cup where ConceptNet expects it, the plate and the bowl
+# in the far cupboard. Not the bowl in the refrigerator: with 1 vote its A is 0.1, so P stays below the idle
+# threshold and the robot never looks there.
+am:cup_1        am:isAt am:table_1 .
+am:plate_1      am:isAt am:cupboard_2 .
+am:bowl_1       am:isAt am:cupboard_2 .
+am:wine_glass_1 am:isAt am:cupboard_1 .
