@@ -8,9 +8,12 @@
   <license>TODO: License declaration</license>
 
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>awareness_kb</exec_depend>
   <exec_depend>awareness_msgs</exec_depend>
+  <exec_depend>python3-jinja2</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>rclpy</exec_depend>
+  <exec_depend>triplestar_core</exec_depend>
   <exec_depend>triplestar_msgs</exec_depend>
 
   <export>
