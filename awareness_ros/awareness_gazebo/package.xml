@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>awareness_gazebo</name>
+  <version>0.0.0</version>
+  <description>mirte in the AWS small house in Gazebo, driven by Nav2, for demonstrating the awareness manager</description>
+  <maintainer email="wremmelzwaan@tudelft.nl">Wessel Remmelzwaan</maintainer>
+  <license>TODO: License declaration</license>
+
+  <exec_depend>aws_robomaker_small_house_world</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>mirte_gazebo</exec_depend>
+  <exec_depend>nav2_behaviors</exec_depend>
+  <exec_depend>nav2_bt_navigator</exec_depend>
+  <exec_depend>nav2_controller</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_planner</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>tf2_msgs</exec_depend>
+  <exec_depend>tf2_ros_py</exec_depend>
+  <exec_depend>twist_stamper</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
