@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>awareness_node</name>
+  <version>0.0.0</version>
+  <description>The awareness manager as a ROS node, with the TriplestarKB as its store</description>
+  <maintainer email="wremmelzwaan@tudelft.nl">Wessel Remmelzwaan</maintainer>
+  <license>TODO: License declaration</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>triplestar_msgs</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
