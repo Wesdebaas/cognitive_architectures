@@ -7,6 +7,7 @@
   <maintainer email="wremmelzwaan@tudelft.nl">Wessel Remmelzwaan</maintainer>
   <license>TODO: License declaration</license>
 
+  <exec_depend>awareness_msgs</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>triplestar_msgs</exec_depend>
 

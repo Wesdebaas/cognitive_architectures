@@ -56,8 +56,10 @@ false at every other place (one knife cannot be in two drawers).
 import math
 
 import pyoxigraph as ox
+from awareness_msgs.msg import (Announcement, Assertion, Belief, Beliefs, Decision, Edge, GoalWeight, Observation,
+                                Option, Report, Staleness)
 
-AM = 'http://example.org/awareness-manager#'
+AM ='http://example.org/awareness-manager#'
 RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
 RDFS = 'http://www.w3.org/2000/01/rdf-schema#'
 DERIVED = ox.NamedNode(f'{AM}derived')
@@ -87,6 +89,11 @@ def value(literal):
     return literal.value
 
 
+def stored(name, graph=OBSERVATIONS):
+    """A SELECT that has a row once am:<name> is in the graph."""
+    return f'SELECT * WHERE {{ GRAPH <{graph.value}> {{ <{AM}{name}> ?p ?o }} }}'
+
+
 def support(w, c):
     """Shafer's degree of support from weight of evidence w: 1 - e^(c*w), c < 0."""
     return 1 - math.exp(c * w)
@@ -104,6 +111,12 @@ class AwarenessManager:
         self.observed = {}     # belief -> its last observation; only observe and assert_knowledge change it (forget)
         self.weights = {}      # (t, active goal) -> goal_weights; announce and derive empty this
         self.needs = {}        # (claim, target) -> the beliefs there, their A and goals (terms); derive empties this
+        self.announcements = 0
+        self.observations = 0
+        self.assertions = 0
+        self.revisions = 0
+        self.decisions = 0
+        self.waiting = False   # the last decision written was a wait
 
     def beliefs(self, goal):
         """{(item, target, claim): A} for every target the association source links to an item the goal needs."""
@@ -248,27 +261,23 @@ class AwarenessManager:
 
         A belief and its A do not depend on the goal, so one belief can belong to several goals (a shared item).
         """
-        for graph in (DERIVED, OBSERVATIONS, DECISIONS):
-            self.knowledge.clear_graph(graph)
         self.observed = {}
         self.derive()
         self.goal = None
 
     def derive(self):
-        """Derive every goal's beliefs and every action from what the store holds now, and amend am:derived to match:
-        what is new is added, what no longer follows is removed, what is unchanged is left alone.
+        """Derive every goal's beliefs and every action from what the KB holds now, and replace am:derived with them.
         Returns (added, removed, changed): the beliefs that appeared, disappeared, and kept their target with another A."""
         before = self.a
-        wanted = set()
-        self.one_place = bool(self.knowledge.query(f'ASK {{ <{AM}{self.claim}> a <{AM}OnePlaceClaim> }}'))
+        self.one_place = bool(list(self.knowledge.query(f'SELECT * WHERE {{ <{AM}{self.claim}> a <{AM}OnePlaceClaim> }}')))
         self.prepared_goals = self.goals()   # the goals whose beliefs were derived; set_goal accepts only these
+        beliefs = {}
         for goal in self.prepared_goals:
             for belief, how in self.derivations(goal).items():
-                wanted |= self.belief_quads(belief, how, goal)
-        present = set(self.knowledge.quads_for_pattern(None, None, None, DERIVED))
-        for quad in present - wanted:
-            self.knowledge.remove(quad)
-        self.knowledge.extend(wanted - present)
+                beliefs.setdefault(belief, self.belief_message(belief, how)).needed_for.append(goal)
+        self.revisions += 1
+        self.knowledge.write(Beliefs(number=self.revisions, beliefs=list(beliefs.values())),
+                             f'SELECT * WHERE {{ GRAPH <{DERIVED.value}> {{ <{AM}derived> <{AM}revision> {self.revisions} }} }}')
         self.actions = list(self.observed_by({}))
         self.types = self.action_types()
         self.persistences = self.declared_persistences()
@@ -277,21 +286,14 @@ class AwarenessManager:
         return (sorted(set(after) - set(before)), sorted(set(before) - set(after)),
                 sorted(b for b in after if b in before and after[b] != before[b]))
 
-    def belief_quads(self, belief, how, goal):
-        """The quads that state a belief in am:derived: the claim it names, its A and how A was derived, and one goal
-        that needs it. The same belief for another goal gives the same quads plus that goal."""
+    @staticmethod
+    def belief_message(belief, how):
+        """A belief and how its A was derived; derive adds the goals that need it."""
         item, target, claim = belief
-        name = self.belief_node(belief)
-        triples = [(name, ox.NamedNode(f'{RDF}reifies'), ox.Triple(node(item), node(claim), node(target))),
-                   (name, node('relevance'), ox.Literal(how['A'])), (name, node('votes'), ox.Literal(how['w'])),
-                   (name, node('discount'), ox.Literal(how['discount'])), (name, node('finds'), ox.Literal(how['finds'])),
-                   (name, node('neededFor'), node(goal))]
-        triples += [(name, node('votesFrom'), ox.NamedNode(cls)) for cls in how['from']]
-        for number, (word, target_word, votes) in enumerate(how['edges'], 1):
-            edge = node(f'{name.value.split("#")[-1]}_edge_{number}')
-            triples += [(name, node('edge'), edge), (edge, node('word'), ox.Literal(word)),
-                        (edge, node('targetWord'), ox.Literal(target_word)), (edge, node('votes'), ox.Literal(votes))]
-        return {ox.Quad(*triple, DERIVED) for triple in triples}
+        return Belief(item=item, claim=claim, target=target, relevance=float(how['A']), votes=float(how['w']),
+                      votes_from=how['from'], discount=float(how['discount']), finds=how['finds'],
+                      edges=[Edge(word=word, target_word=target_word, votes=float(votes))
+                             for word, target_word, votes in how['edges']])
 
     def explanations(self):
         """[{item, target, claim, A, w, discount, finds, A_source, A_finds, from, edges, goals}] for every belief in
@@ -321,16 +323,6 @@ class AwarenessManager:
             for key in ('from', 'edges', 'goals'):
                 how[key].sort()
         return [found[belief] for belief in sorted(found)]
-
-    @staticmethod
-    def belief_node(belief):
-        item, target, claim = belief
-        return node(f'belief_{item}_{claim}_{target}')
-
-    def count(self, cls, graph):
-        """How many things of class am:<cls> the graph holds; numbers observations and decisions in the order they were made."""
-        query = f'SELECT (COUNT(?x) AS ?n) WHERE {{ GRAPH <{graph.value}> {{ ?x a <{AM}{cls}> }} }}'
-        return value(next(iter(self.knowledge.query(query)))['n'])
 
     @property
     def a(self):
@@ -364,14 +356,15 @@ class AwarenessManager:
         for those items, so an empty observation from before it no longer counts for them; a sighting from before it still
         says where the item was (last_observation).
         """
-        query = f'SELECT ?item WHERE {{ ?item a <{AM}Item> }}'
-        known = {short(row['item']) for row in self.knowledge.query(query)}
-        self.knowledge.load(input=turtle.encode(), format=ox.RdfFormat.TURTLE)
-        introduced = sorted({short(row['item']) for row in self.knowledge.query(query)} - known)
-        assertion = node(f'assertion_{self.count("Assertion", OBSERVATIONS) + 1}')
-        quads = [(assertion, ox.NamedNode(f'{RDF}type'), node('Assertion')), (assertion, node('t'), ox.Literal(t))]
-        quads += [(assertion, node('introduced'), node(item)) for item in introduced]
-        self.knowledge.extend([ox.Quad(*quad, OBSERVATIONS) for quad in quads])
+        triples = list(ox.parse(turtle, format=ox.RdfFormat.TURTLE))
+        items = {short(triple.subject) for triple in triples
+                 if triple.predicate == ox.NamedNode(f'{RDF}type') and triple.object == node('Item')}
+        known = {short(row['item']) for row in self.knowledge.query(f'SELECT ?item WHERE {{ ?item a <{AM}Item> }}')}
+        self.assertions += 1
+        introduced = sorted(items - known)
+        self.knowledge.write(Assertion(number=self.assertions, t=float(t), introduced=introduced,
+                                       triples=ox.serialize(triples, format=ox.RdfFormat.N_TRIPLES).decode()),
+                             stored(f'assertion_{self.assertions}'))
         self.forget(items=set(introduced))
         return self.derive()
 
@@ -393,17 +386,11 @@ class AwarenessManager:
         action_type, target = action
         classes, claim, duration, complete = self.types[action_type]
         found = {item for item, reported in values.items() if reported is True and self.seen((item, target, claim)) is not True}
-        observation = node(f'observation_{self.count("Observation", OBSERVATIONS) + 1}')
-        quads = [(observation, ox.NamedNode(f'{RDF}type'), node('Observation')), (observation, node('action'), node(action_type)),
-                 (observation, node('target'), node(target)), (observation, node('claim'), ox.Literal(claim)),
-                 (observation, node('t'), ox.Literal(t)), (observation, node('complete'), ox.Literal(complete))]
-        for item, reported in values.items():
-            report = ox.BlankNode()
-            quads += [(observation, node('reported'), report), (report, node('item'), node(item)),
-                      (report, node('value'), ox.Literal(reported))]
-            if item in found:
-                quads.append((report, node('find'), ox.Literal(True)))
-        self.knowledge.extend([ox.Quad(*quad, OBSERVATIONS) for quad in quads])
+        self.observations += 1
+        reports = [Report(item=item, value=reported, find=item in found) for item, reported in values.items()]
+        self.knowledge.write(Observation(number=self.observations, action=action_type, target=target, claim=claim,
+                                         t=float(t), complete=complete, reported=reports),
+                             stored(f'observation_{self.observations}'))
         self.forget(target=target, items={item for item, reported in values.items() if reported is True})
         return self.derive() if found else ([], [], [])
 
@@ -510,10 +497,9 @@ class AwarenessManager:
     def announce(self, goal, t):
         """Store that the goal will arrive at time t: one am:Announcement in am:observations. Arrivals are given, not
         predicted; an announced goal that is not known yet (no beliefs) has no weight until it is asserted."""
-        announcement = node(f'announcement_{self.count("Announcement", OBSERVATIONS) + 1}')
-        quads = [(announcement, ox.NamedNode(f'{RDF}type'), node('Announcement')), (announcement, node('goal'), node(goal)),
-                 (announcement, node('arrival'), ox.Literal(t))]
-        self.knowledge.extend([ox.Quad(*quad, OBSERVATIONS) for quad in quads])
+        self.announcements += 1
+        self.knowledge.write(Announcement(number=self.announcements, goal=goal, arrival=float(t)),
+                             stored(f'announcement_{self.announcements}'))
         self.weights = {}
 
     def goal_weights(self, t):
@@ -583,32 +569,18 @@ class AwarenessManager:
         """Write a decision into am:decisions: the options with their P, C and U, the weight of every weighted goal, E of
         every belief such a goal needs, and the chosen action. A wait is written only when it starts, not again while it
         lasts."""
-        count = self.count('Decision', DECISIONS)
-        if chosen is None and count:
-            last = f'{AM}decision_{count}'
-            if not self.knowledge.query(f'ASK {{ GRAPH <{DECISIONS.value}> {{ <{last}> <{AM}chosenAction> ?a }} }}'):
-                return
-        decision = node(f'decision_{count + 1}')
-        quads = [(decision, ox.NamedNode(f'{RDF}type'), node('Decision')), (decision, node('t'), ox.Literal(t)),
-                 (decision, node('position'), node(position))]
-        if self.goal is not None:
-            quads.append((decision, node('goal'), node(self.goal)))
-        if chosen is not None:
-            quads += [(decision, node('chosenAction'), node(chosen[0])), (decision, node('chosenTarget'), node(chosen[1]))]
-        for (action_type, target), p, c in options:
-            option = ox.BlankNode()
-            quads += [(decision, node('option'), option), (option, node('action'), node(action_type)),
-                      (option, node('target'), node(target)), (option, node('priority'), ox.Literal(p))]
-            if c is not None:
-                quads += [(option, node('cost'), ox.Literal(c)), (option, node('utility'), ox.Literal(p / c))]
-        weights = self.goal_weights(t)
-        needs = self.goal_beliefs
-        for goal, weight in weights.items():
-            entry = ox.BlankNode()
-            quads += [(decision, node('goalWeight'), entry), (entry, node('goal'), node(goal)),
-                      (entry, node('value'), ox.Literal(weight))]
-        for belief in sorted(set().union(*(needs[goal] for goal in weights))):
-            staleness = ox.BlankNode()
-            quads += [(decision, node('staleness'), staleness), (staleness, node('belief'), self.belief_node(belief)),
-                      (staleness, node('value'), ox.Literal(self.e(belief, t)))]
-        self.knowledge.extend([ox.Quad(*quad, DECISIONS) for quad in quads])
+        if chosen is None and self.waiting:
+            return
+        self.waiting = chosen is None
+        self.decisions += 1
+        weights, needs = self.goal_weights(t), self.goal_beliefs
+        beliefs = sorted(set().union(*(needs[goal] for goal in weights)))
+        self.knowledge.write(Decision(
+            number=self.decisions, t=float(t), position=position, goal=self.goal or '',
+            chosen_action=chosen[0] if chosen else '', chosen_target=chosen[1] if chosen else '',
+            options=[Option(action=action_type, target=target, priority=float(p), reachable=c is not None,
+                            cost=float(c) if c is not None else 0.0, utility=float(p / c) if c is not None else 0.0)
+                     for (action_type, target), p, c in options],
+            goal_weights=[GoalWeight(goal=goal, value=float(weight)) for goal, weight in weights.items()],
+            stalenesses=[Staleness(item=item, claim=claim, target=target, value=float(self.e((item, target, claim), t)))
+                         for item, target, claim in beliefs]))
