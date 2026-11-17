@@ -1,0 +1,5 @@
+# What is at a target, in the simulation.
+
+string target    # e.g. table_1
+---
+string[] items   # every item there

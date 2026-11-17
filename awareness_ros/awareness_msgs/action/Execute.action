@@ -1,0 +1,8 @@
+# Carry out an action: go to the target, then observe.
+
+string action_type         # e.g. inspect
+string target              # e.g. table_1
+---
+bool success               # false if the target could not be reached
+Assessment[] assessed      # what the action reported, for the items it assessed
+---

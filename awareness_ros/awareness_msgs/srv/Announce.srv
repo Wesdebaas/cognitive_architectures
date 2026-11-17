@@ -1,0 +1,5 @@
+# A goal will arrive at a given time.
+
+string goal      # e.g. lunch
+float64 arrival  # seconds on the run clock
+---

@@ -1,0 +1,6 @@
+# Make a goal the active one.
+
+string goal      # e.g. lunch; empty for no active goal
+---
+bool success     # false if the AM does not know the goal; the previous goal stays active
+string message

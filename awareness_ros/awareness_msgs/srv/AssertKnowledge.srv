@@ -1,0 +1,6 @@
+# Knowledge given from outside, now.
+
+string turtle    # the knowledge, as Turtle
+---
+bool success     # false if the Turtle cannot be read
+string message
