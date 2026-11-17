@@ -30,6 +30,9 @@ insertion_subscribers:
   - topic: "/awareness/beliefs"
     template: "replace-beliefs.sparql.tmpl"
 
+  - topic: "/awareness/decisions"
+    template: "insert-decision.sparql.tmpl"
+
 # Expose the latest topic value as a query-time SPARQL function.
 query_time_topic_subscribers:
   - topic: "/clock"

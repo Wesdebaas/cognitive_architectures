@@ -9,9 +9,13 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Assertion.msg"
   "msg/Belief.msg"
   "msg/Beliefs.msg"
+  "msg/Decision.msg"
   "msg/Edge.msg"
+  "msg/GoalWeight.msg"
   "msg/Observation.msg"
+  "msg/Option.msg"
   "msg/Report.msg"
+  "msg/Staleness.msg"
 )
 
 ament_export_dependencies(rosidl_default_runtime)

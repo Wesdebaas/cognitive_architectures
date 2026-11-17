@@ -1,0 +1,28 @@
+PREFIX am: <http://example.org/awareness-manager#>
+
+INSERT DATA { GRAPH am:decisions {
+  am:decision_{{ msg.number }} a am:Decision ;
+      am:t {{ msg.t | rdf }} ;
+      am:position am:{{ msg.position }} .
+  {% if msg.goal %}
+  am:decision_{{ msg.number }} am:goal am:{{ msg.goal }} .
+  {% endif %}
+  {% if msg.chosen_action %}
+  am:decision_{{ msg.number }} am:chosenAction am:{{ msg.chosen_action }} ; am:chosenTarget am:{{ msg.chosen_target }} .
+  {% endif %}
+  {% for o in msg.options %}
+  am:decision_{{ msg.number }} am:option _:option{{ loop.index }} .
+  _:option{{ loop.index }} am:action am:{{ o.action }} ; am:target am:{{ o.target }} ; am:priority {{ o.priority | rdf }} .
+  {% if o.reachable %}
+  _:option{{ loop.index }} am:cost {{ o.cost | rdf }} ; am:utility {{ o.utility | rdf }} .
+  {% endif %}
+  {% endfor %}
+  {% for w in msg.goal_weights %}
+  am:decision_{{ msg.number }} am:goalWeight _:weight{{ loop.index }} .
+  _:weight{{ loop.index }} am:goal am:{{ w.goal }} ; am:value {{ w.value | rdf }} .
+  {% endfor %}
+  {% for s in msg.stalenesses %}
+  am:decision_{{ msg.number }} am:staleness _:staleness{{ loop.index }} .
+  _:staleness{{ loop.index }} am:belief am:belief_{{ s.item }}_{{ s.claim }}_{{ s.target }} ; am:value {{ s.value | rdf }} .
+  {% endfor %}
+} }
