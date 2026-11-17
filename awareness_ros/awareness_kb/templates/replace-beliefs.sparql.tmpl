@@ -1,0 +1,26 @@
+PREFIX am: <http://example.org/awareness-manager#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+DELETE WHERE { GRAPH am:derived { ?s ?p ?o } } ;
+
+INSERT DATA { GRAPH am:derived {
+  am:derived am:revision {{ msg.number | rdf }} .
+  {% for b in msg.beliefs %}
+  {% set name = 'am:belief_' ~ b.item ~ '_' ~ b.claim ~ '_' ~ b.target %}
+  {{ name }} rdf:reifies <<( am:{{ b.item }} am:{{ b.claim }} am:{{ b.target }} )>> ;
+      am:relevance {{ b.relevance | rdf }} ;
+      am:votes {{ b.votes | rdf }} ;
+      am:discount {{ b.discount | rdf }} ;
+      am:finds {{ b.finds | rdf }} .
+  {% for cls in b.votes_from %}
+  {{ name }} am:votesFrom <{{ cls }}> .
+  {% endfor %}
+  {% for goal in b.needed_for %}
+  {{ name }} am:neededFor am:{{ goal }} .
+  {% endfor %}
+  {% for e in b.edges %}
+  {{ name }} am:edge {{ name }}_edge_{{ loop.index }} .
+  {{ name }}_edge_{{ loop.index }} am:word {{ e.word | rdf }} ; am:targetWord {{ e.target_word | rdf }} ; am:votes {{ e.votes | rdf }} .
+  {% endfor %}
+  {% endfor %}
+} }

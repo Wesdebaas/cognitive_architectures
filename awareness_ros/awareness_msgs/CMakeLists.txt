@@ -7,6 +7,9 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Announcement.msg"
   "msg/Assertion.msg"
+  "msg/Belief.msg"
+  "msg/Beliefs.msg"
+  "msg/Edge.msg"
   "msg/Observation.msg"
   "msg/Report.msg"
 )
