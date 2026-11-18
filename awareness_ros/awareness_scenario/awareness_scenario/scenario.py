@@ -1,19 +1,16 @@
 """The day's script: asserts the scenario's knowledge and announces every goal arrival, then sets goals, asserts
 knowledge and starts nights on time."""
 
-import csv
 from pathlib import Path
 
 import rclpy
-import yaml
 from ament_index_python.packages import get_package_share_directory
 from awareness_msgs.srv import Announce, AssertKnowledge, SetGoal
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 
-# What comes first when several things fall on the same second, as in the testbed.
-NIGHT, ASSERTION, GOAL, END = range(4)
+from .timeline import ASSERTION, GOAL, NIGHT, settings, timetable
 
 
 class ScenarioNode(Node):
@@ -22,22 +19,9 @@ class ScenarioNode(Node):
         super().__init__('scenario')
         world = self.declare_parameter('world', 'household/day').value
         self.folder = Path(get_package_share_directory('awareness_scenario')) / world
-        with open(self.folder.parent / 'run.yaml') as f:
-            run = yaml.safe_load(f)
-        with open(self.folder / 'goal_events.csv') as f:
-            goals = [(float(row['t']), row['goal']) for row in csv.DictReader(f)]
-        with open(self.folder / 'knowledge_events.csv') as f:
-            assertions = [(float(row['t']), row['file']) for row in csv.DictReader(f)]
+        run = settings(self.folder)
         self.knowledge = run['knowledge']   # this scenario's own goals and instances, asserted first
-        day, days = 24 * run['seconds_per_day_hour'], run['days']
-        # (t, what comes first, kind, value): goals every day, knowledge on the first day only, a night after every
-        # day but the last, and the end of the run.
-        self.arrivals = [(number * day + t, goal) for number in range(days) for t, goal in goals]
-        self.timetable = sorted(
-            [(t, GOAL, goal) for t, goal in self.arrivals]
-            + [(t, ASSERTION, name) for t, name in assertions]
-            + [(number * day + run['run_length'], NIGHT, None) for number in range(days - 1)]
-            + [((days - 1) * day + run['run_length'], END, None)], key=lambda entry: entry[:2])
+        self.arrivals, self.timetable = timetable(self.folder)
         clients = ReentrantCallbackGroup()   # so their answers arrive while the timetable waits for them
         self.set_goal = self.create_client(SetGoal, '/awareness/set_goal', callback_group=clients)
         self.announce = self.create_client(Announce, '/awareness/announce', callback_group=clients)
@@ -45,7 +29,7 @@ class ScenarioNode(Node):
         self.announced = False
         self.done = False
         self.create_timer(1.0, self.tick, callback_group=MutuallyExclusiveCallbackGroup())
-        self.get_logger().info(f'{world}: {days} days, {len(self.timetable)} entries')
+        self.get_logger().info(f'{world}: {run['days']} days, {len(self.timetable)} entries')
 
     def now(self):
         return self.get_clock().now().nanoseconds / 1e9
