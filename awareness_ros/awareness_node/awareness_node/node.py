@@ -1,20 +1,12 @@
 """The awareness manager as a ROS node: takes goals, announcements and knowledge, and sends actions to the executor."""
 
-import csv
-import math
-from functools import partial
-from pathlib import Path
-
 import rclpy
-import yaml
-from ament_index_python.packages import get_package_share_directory
 from awareness_msgs.action import Execute
 from awareness_msgs.srv import Announce, AssertKnowledge, SetGoal
 from rclpy.action import ActionClient
 from rclpy.node import Node
 
-from . import conceptnet
-from .awareness_manager import AwarenessManager
+from .build import awareness_manager
 from .kb import KBClient
 
 
@@ -22,17 +14,11 @@ class AwarenessNode(Node):
 
     def __init__(self):
         super().__init__('awareness_manager')
-        share = Path(get_package_share_directory('awareness_node'))
         claim = self.declare_parameter('claim', 'present').value
         self.position = self.declare_parameter('start_position', 'dock').value
-        self.speed = self.declare_parameter('speed', 0.5).value   # metres per second. Chosen: 0.5
+        speed = self.declare_parameter('speed', 0.5).value   # metres per second. Chosen: 0.5
         places = self.declare_parameter('places', '').value   # the scenario's places.csv: where each target is
-        with open(share / 'config' / 'parameters.yaml') as f:
-            parameters = yaml.safe_load(f)
-        with open(places) as f:
-            self.coordinates = {row['place']: (float(row['x']), float(row['y'])) for row in csv.DictReader(f)}
-        association = partial(conceptnet.located_at, path=share / 'data' / conceptnet.FILE)
-        self.am = AwarenessManager(KBClient(), association, claim, self.travel_time, parameters)
+        self.am = awareness_manager(KBClient(), places, speed, claim)
         self.am.start()
         self.action = None   # the action the executor is carrying out
         self.idle = False
@@ -45,14 +31,6 @@ class AwarenessNode(Node):
 
     def now(self):
         return self.get_clock().now().nanoseconds / 1e9
-
-    def travel_time(self, start, end):
-        """Whole seconds in a straight line; None if either has no coordinates."""
-        if start == end:
-            return 0.0
-        if start not in self.coordinates or end not in self.coordinates:
-            return None
-        return float(round(math.dist(self.coordinates[start], self.coordinates[end]) / self.speed))
 
     def set_goal(self, request, response):
         try:
