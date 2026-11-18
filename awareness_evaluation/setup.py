@@ -12,5 +12,5 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    entry_points={'console_scripts': []},
+    entry_points={'console_scripts': [f'simulate = {package_name}.simulate:main']},
 )
