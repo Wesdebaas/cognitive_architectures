@@ -4,12 +4,22 @@ An awareness manager that decides what a household robot should look at next. MS
 
 ## Layout
 
-- `awareness/`: the awareness manager and a testbed that runs it without ROS
-- `awareness_replay/`: rqt panel to step through a testbed run
-- `awareness_ros/awareness_kb/`: TriplestarKB bringup with the household knowledge
+- `awareness_ros/`: the system: `awareness_node` (the AM), `awareness_kb`, `awareness_msgs`, `awareness_scenario`, `awareness_gazebo`
+- `awareness_evaluation/`: the evaluation: runs the AM through a scenario without ROS nodes
+- `awareness/`, `awareness_replay/`: the old testbed and its viewer
 - `workspace.repos`: pinned third-party sources
 
 The earlier Gazebo system is kept at tag `gazebo-proof-of-concept`.
+
+## Architecture
+
+![The run without Gazebo](docs/architecture/ros_architecture.png)
+
+The run without Gazebo: six ROS nodes; the AM decides, the stand-in executor carries out its looks.
+
+![Inside the AM node](docs/architecture/ros_architecture_am_zoomed.png)
+
+Inside the AM node: the manager's parts compute P = Σ E·A·weight and choose the look with the highest U = P / C; they share state only through the KB.
 
 ## Setup
 
@@ -38,6 +48,17 @@ source install/setup.bash
 From `src/cognitive_architectures`:
 
 ```bash
+ros2 launch awareness_scenario run.launch.py scenario:=kitchen   # six ROS nodes, 10x real time
+ros2 launch awareness_gazebo run.launch.py                       # mirte drives to the kitchen's places in the AWS house
+```
+
+In Gazebo only the robot is simulated: the items are kept by the world node, as in the run without Gazebo, and are not
+drawn. Only the kitchen scenario has places in the AWS house.
+
+Work in progress, the evaluation, moving from the old testbed to `awareness_evaluation` (the AM on LocalKB, no ROS nodes):
+
+```bash
+ros2 run awareness_evaluation simulate awareness_ros/awareness_scenario/kitchen/day kitchen.log
 python3 awareness/testbed/run.py awareness/scenarios/household awareness/scenarios/household/worlds/day
 python3 awareness/testbed/regression.py
 ros2 launch awareness/testbed/visualization/replay.launch.py scenario:=household run:=household_day
@@ -59,5 +80,5 @@ java -jar ~/tools/robot/robot.jar merge \
   --catalog ~/ros2_ws/src/soma/owl/catalog-v001.xml \
   --input   ~/ros2_ws/src/soma/owl/SOMA-HOME.owl \
   convert --format ttl \
-  --output  ~/ros2_ws/src/cognitive_architectures/awareness/sources/soma-home-2.1.0.ttl
+  --output  ~/ros2_ws/src/cognitive_architectures/awareness_ros/awareness_kb/preload/soma-home-2.1.0.ttl
 ```
