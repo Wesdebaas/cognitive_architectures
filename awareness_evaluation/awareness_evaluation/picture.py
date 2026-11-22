@@ -1,18 +1,10 @@
 """One step of a run drawn for RViz, seen from above: the places, the robot, where the items really are and where the
-robot's looks say they are. Time, goal and what happened are text, shown outside the picture.
-
-ros2 run awareness_evaluation picture <events file> <places.csv> <step number>
-"""
+robot's looks say they are. Time, goal and what happened are text, shown outside the picture."""
 
 import csv
-import sys
 
-import rclpy
 from geometry_msgs.msg import Point
-from rclpy.qos import DurabilityPolicy, QoSProfile
 from visualization_msgs.msg import Marker, MarkerArray
-
-from .steps import read, steps
 
 TOPIC = '/awareness/view'
 
@@ -74,17 +66,3 @@ def picture(places, step):
         m.id = number
     return MarkerArray(markers=markers)
 
-
-def main():
-    events, places, number = sys.argv[1], read_places(sys.argv[2]), int(sys.argv[3])
-    rclpy.init()
-    node = rclpy.create_node('picture')
-    # Transient local: RViz gets the picture even if it starts later.
-    publisher = node.create_publisher(MarkerArray, TOPIC, QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
-    step = steps(read(events))[number]
-    publisher.publish(picture(places, step))
-    print(f"step {number}: t = {step['t']} s, {step['goal'] or 'no goal'}, {step['happened']}; Ctrl-C to stop")
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
