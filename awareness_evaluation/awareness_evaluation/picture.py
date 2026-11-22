@@ -8,6 +8,13 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 TOPIC = '/awareness/view'
 
+# The kitchen's floor in metres, from (0, 0). Chosen: 6 x 5 m, the same for every number of places.
+ROOM_X, ROOM_Y = 6.0, 5.0
+
+# Greys of the floor and of a place's box; the walls are white. Chosen: dark, so white, orange and sky blue text stay
+# readable on them.
+FLOOR_GREY, BOX_GREY = 0.2, 0.45
+
 # Size of a place's box in metres. Chosen: smaller than the 0.7 m between the closest places.
 BOX_X, BOX_Y = 0.5, 0.3
 
@@ -44,8 +51,15 @@ def text(words, x, y, colour=(1.0, 1.0, 1.0)):
 def picture(places, step):
     """The step as a MarkerArray: everything RViz showed before is cleared first."""
     markers = [Marker(action=Marker.DELETEALL)]
+    floor = marker(Marker.CUBE, ROOM_X / 2, ROOM_Y / 2, (FLOOR_GREY,) * 3)
+    floor.pose.position.z = -0.02
+    floor.scale.x, floor.scale.y, floor.scale.z = ROOM_X, ROOM_Y, 0.01
+    walls = marker(Marker.LINE_STRIP, 0.0, 0.0)
+    walls.points = [Point(x=x, y=y) for x, y in [(0.0, 0.0), (ROOM_X, 0.0), (ROOM_X, ROOM_Y), (0.0, ROOM_Y), (0.0, 0.0)]]
+    walls.scale.x = 0.05
+    markers += [floor, walls]
     for name, (x, y) in places.items():
-        box = marker(Marker.CUBE, x, y, (0.45, 0.45, 0.45))
+        box = marker(Marker.CUBE, x, y, (BOX_GREY,) * 3)
         box.scale.x, box.scale.y, box.scale.z = BOX_X, BOX_Y, 0.02
         markers += [box, text(name, x, y)]
     for items, colour, direction in [(step['really'], REALLY, -1), (step['says'], SAYS, 1)]:
