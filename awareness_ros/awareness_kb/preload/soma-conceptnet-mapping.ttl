@@ -27,6 +27,8 @@ SOMA:PastaBowl      am:word "pasta_bowl" .
 SOMA:SaladBowl      am:word "salad_bowl" .
 SOMA:Bowl           am:word "bowl" .
 SOMA:WineGlass      am:word "wine_glass" .
+SOMA:Glass          am:word "glass" .
+SOMA:Bread          am:word "bread" .
 SOMA:Knife          am:word "knife" .
 SOMA:Spoon          am:word "spoon" .
 SOMA:Pan            am:word "pan" .
