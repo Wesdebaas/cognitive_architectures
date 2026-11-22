@@ -15,12 +15,12 @@ def read(file):
 
 
 def steps(events):
-    """[{t, happened, goal, needs, robot, chosen, really, says, seen}]: one step per start, goal, move, look, decision,
-    night and end. needs: the items the goal needs. really: where each item is. says: where the robot's looks say it is.
+    """[{t, happened, goal, needs, robot, chosen, really, says, seen, decision}]: one step per start, goal, move, look,
+    decision, night and end. needs: the items the goal needs. decision: the last decision event, or None. really: where each item is. says: where the robot's looks say it is.
     seen: where and when each item was last seen, (place, t). A look sees everything at its place: an item seen is there;
     an item the looks said was there but not seen no longer is, so the robot does not know where it is."""
     result = []
-    goal, needs, robot, chosen, really, says, seen = None, [], None, None, {}, {}, {}
+    goal, needs, robot, chosen, really, says, seen, decision = None, [], None, None, {}, {}, {}, None
     for event in events:
         kind = event['event']
         if kind == 'start':
@@ -46,14 +46,15 @@ def steps(events):
             seen.update({item: (robot, event['t']) for item in event['seen']})
             happened = f"looks at {robot}: {', '.join(event['seen']) or 'nothing'}"
         elif kind == 'decision':
-            chosen = event['chosen_target'] or None
+            chosen, decision = event['chosen_target'] or None, event
             happened = f"decides: {chosen or 'wait'}"
         elif kind == 'end':
             happened = 'end'
         else:
             continue
         result.append({'t': event['t'], 'happened': happened, 'goal': goal, 'needs': needs, 'robot': robot,
-                       'chosen': chosen, 'really': dict(really), 'says': dict(says), 'seen': dict(seen)})
+                       'chosen': chosen, 'really': dict(really), 'says': dict(says), 'seen': dict(seen),
+                       'decision': decision})
     return result
 
 

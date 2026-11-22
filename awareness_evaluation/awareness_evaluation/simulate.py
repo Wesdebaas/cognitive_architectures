@@ -52,7 +52,8 @@ def run(folder, events):
         needs.setdefault(goal, []).append(item)
     position, action, started, ends = robot['start_position'], None, None, None
 
-    record('start', 0, position=position, locations=dict(sorted(world.where.items())))
+    record('start', 0, position=position, locations=dict(sorted(world.where.items())),
+           threshold=am.decision.parameters['idle_threshold'])
     am.start()
     for name in run['knowledge']:
         am.assert_knowledge((folder.parent / name).read_text(), 0)
