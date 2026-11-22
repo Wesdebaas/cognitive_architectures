@@ -1,5 +1,5 @@
-"""Step through a finished run: a window with the time, goal, what happened, the items and why the robot chose its
-place; RViz shows each step's picture.
+"""Step through a finished run: a window with the time, goal, what happened, the items, why the robot chose its place
+and how that place's P is made; RViz shows each step's picture.
 
 ros2 run awareness_evaluation replay <events file> <places.csv>
 rviz2 -d awareness_evaluation/view.rviz
@@ -20,6 +20,7 @@ from .steps import read, steps
 
 ITEM_COLUMNS = ['Item', 'Needed', 'Really at', 'Looks say', 'Last seen', '']
 RANKING_COLUMNS = ['Place', 'P', 'C (s)', 'U', '']
+BELIEF_COLUMNS = ['Item', 'E', 'A', 'Finds', 'Weight', 'E·A·weight']
 
 
 def item_rows(step):
@@ -58,6 +59,25 @@ def ranking_rows(step, threshold):
     return rows
 
 
+def belief_rows(step, place):
+    """Every belief at the place that a weighted goal needs, at the last decision: E and the goal weights from the
+    decision, A and finds from the last beliefs before it. The last column sums to the place's P."""
+    decision, beliefs = step['decision'], step['beliefs']
+    if decision is None or beliefs is None:
+        return []
+    weights = {weight['goal']: weight['value'] for weight in decision['goal_weights']}
+    found = {(belief['item'], belief['target']): belief for belief in beliefs['beliefs']}
+    rows = []
+    for staleness in decision['stalenesses']:
+        if staleness['target'] != place:
+            continue
+        belief = found[(staleness['item'], place)]
+        e, a = staleness['value'], belief['relevance']
+        weight = sum(weights.get(goal, 0.0) for goal in belief['needed_for'])
+        rows.append([staleness['item'], f'{e:.3f}', f'{a:.3f}', str(belief['finds']), f'{weight:g}', f'{e * a * weight:.3f}'])
+    return rows
+
+
 def table(columns):
     widget = QTableWidget(0, len(columns))
     widget.setHorizontalHeaderLabels(columns)
@@ -86,13 +106,20 @@ def main():
     app = QApplication(sys.argv[:1])
     window = QWidget()
     window.setWindowTitle('replay')
-    header, happened, decided = QLabel(), QLabel(), QLabel()
-    items, ranking = table(ITEM_COLUMNS), table(RANKING_COLUMNS)
+    header, happened, decided, explained = QLabel(), QLabel(), QLabel(), QLabel()
+    items, ranking, beliefs = table(ITEM_COLUMNS), table(RANKING_COLUMNS), table(BELIEF_COLUMNS)
     slider = QSlider(Qt.Horizontal)
     slider.setRange(0, len(run) - 1)
     back, forward = QPushButton('◀'), QPushButton('▶')
     back.clicked.connect(lambda: slider.setValue(slider.value() - 1))
     forward.clicked.connect(lambda: slider.setValue(slider.value() + 1))
+
+    def explain(place):
+        """Fill Beliefs for one place of the current step's ranking."""
+        step = run[slider.value()]
+        rows = belief_rows(step, place)
+        explained.setText(f"Beliefs at {place}, P = {sum(float(cells[-1]) for cells in rows):.3f}" if place else '')
+        fill(beliefs, rows)
 
     def show(number):
         step = run[number]
@@ -103,9 +130,11 @@ def main():
         decision = step['decision']
         decided.setText('no decision yet' if decision is None else
                         f"decided at t = {decision['t']} s: {decision['chosen_target'] or 'wait'}")
+        explain(ranking.item(0, 0).text() if ranking.rowCount() else None)
         publisher.publish(picture(places, step))
 
     slider.valueChanged.connect(show)
+    ranking.cellClicked.connect(lambda row, column: explain(ranking.item(row, 0).text()))
     row = QHBoxLayout()
     for widget in (back, slider, forward):
         row.addWidget(widget)
@@ -116,12 +145,14 @@ def main():
     tables, right = QHBoxLayout(), QVBoxLayout()
     right.addWidget(decided)
     right.addWidget(ranking)
+    right.addWidget(explained)
+    right.addWidget(beliefs)
     tables.addWidget(items)
     tables.addLayout(right)
     layout.addLayout(tables)
 
     show(0)
-    window.resize(1200, 600)
+    window.resize(1200, 800)
     window.show()
     app.exec_()
     node.destroy_node()
