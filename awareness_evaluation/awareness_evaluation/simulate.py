@@ -15,6 +15,8 @@ from awareness_node.local_kb import LocalKB
 from awareness_scenario.timeline import ASSERTION, GOAL, NIGHT, World, settings, timetable
 from rosidl_runtime_py.convert import message_to_ordereddict
 
+from .draw_moves import AM, query
+
 
 class RecordingKB(LocalKB):
     """LocalKB that also records every message the AM writes, as an event at the current time."""
@@ -44,6 +46,10 @@ def run(folder, events):
     world = World(folder)
     arrivals, entries = timetable(folder)
     run = settings(folder)
+    needs = {}
+    for goal, item in query(folder.parent, run['knowledge'],
+                            f'SELECT ?a ?b WHERE {{ ?a <{AM}requires> ?c . ?c <{AM}about> ?b }}'):
+        needs.setdefault(goal, []).append(item)
     position, action, started, ends = robot['start_position'], None, None, None
 
     record('start', 0, position=position, locations=dict(sorted(world.where.items())))
@@ -66,7 +72,7 @@ def run(folder, events):
             elif kind == GOAL:
                 try:
                     am.set_goal(value)
-                    record('goal', t, goal=value, known=True)
+                    record('goal', t, goal=value, known=True, needs=sorted(needs[value]))
                 except ValueError:
                     record('goal', t, goal=value, known=False)
 
