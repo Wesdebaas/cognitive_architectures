@@ -14,5 +14,6 @@ setup(
     zip_safe=True,
     entry_points={'console_scripts': [f'simulate = {package_name}.simulate:main',
                                       f'draw_moves = {package_name}.draw_moves:main',
-                                      f'steps = {package_name}.steps:main']},
+                                      f'steps = {package_name}.steps:main',
+                                      f'picture = {package_name}.picture:main']},
 )
