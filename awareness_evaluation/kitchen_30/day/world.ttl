@@ -1,0 +1,11 @@
+@prefix am: <http://example.org/awareness-manager#> .
+
+# Where every item really is at t = 0; world_events.csv changes it. Drawn by draw_moves, seed 1.
+am:bowl_1 am:isAt am:dishwasher_1 .
+am:bread_1 am:isAt am:refrigerator_1 .
+am:cup_1 am:isAt am:sink_1 .
+am:fork_1 am:isAt am:table_3 .
+am:glass_1 am:isAt am:sink_1 .
+am:knife_1 am:isAt am:drawer_4 .
+am:plate_1 am:isAt am:cupboard_6 .
+am:spoon_1 am:isAt am:table_3 .

@@ -12,5 +12,6 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    entry_points={'console_scripts': [f'simulate = {package_name}.simulate:main']},
+    entry_points={'console_scripts': [f'simulate = {package_name}.simulate:main',
+                                      f'draw_moves = {package_name}.draw_moves:main']},
 )
