@@ -1,0 +1,61 @@
+@prefix SOMA: <http://www.ease-crc.org/ont/SOMA.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+
+# The places where the robot can look: a 6 x 5 m kitchen of 30 places. Chosen: once each refrigerator, sink, stove,
+# dishwasher and oven; 5 countertops; 10 cupboards; 7 drawers; 3 table segments.
+am:refrigerator_1 a am:Place , SOMA:Refrigerator .
+am:sink_1         a am:Place , SOMA:Sink .
+am:stove_1        a am:Place , SOMA:Stove .
+am:dishwasher_1   a am:Place , SOMA:Dishwasher .
+am:oven_1         a am:Place , SOMA:Oven .
+
+am:countertop_1 a am:Place , SOMA:Countertop .
+am:countertop_2 a am:Place , SOMA:Countertop .
+am:countertop_3 a am:Place , SOMA:Countertop .
+am:countertop_4 a am:Place , SOMA:Countertop .
+am:countertop_5 a am:Place , SOMA:Countertop .
+
+am:cupboard_1  a am:Place , SOMA:Cupboard .
+am:cupboard_2  a am:Place , SOMA:Cupboard .
+am:cupboard_3  a am:Place , SOMA:Cupboard .
+am:cupboard_4  a am:Place , SOMA:Cupboard .
+am:cupboard_5  a am:Place , SOMA:Cupboard .
+am:cupboard_6  a am:Place , SOMA:Cupboard .
+am:cupboard_7  a am:Place , SOMA:Cupboard .
+am:cupboard_8  a am:Place , SOMA:Cupboard .
+am:cupboard_9  a am:Place , SOMA:Cupboard .
+am:cupboard_10 a am:Place , SOMA:Cupboard .
+
+am:drawer_1 a am:Place , SOMA:Drawer .
+am:drawer_2 a am:Place , SOMA:Drawer .
+am:drawer_3 a am:Place , SOMA:Drawer .
+am:drawer_4 a am:Place , SOMA:Drawer .
+am:drawer_5 a am:Place , SOMA:Drawer .
+am:drawer_6 a am:Place , SOMA:Drawer .
+am:drawer_7 a am:Place , SOMA:Drawer .
+
+am:table_1 a am:Place , SOMA:Table .
+am:table_2 a am:Place , SOMA:Table .
+am:table_3 a am:Place , SOMA:Table .
+
+# The items the goals need.
+am:cup_1   a am:Item , SOMA:Cup .
+am:bowl_1  a am:Item , SOMA:Bowl .
+am:spoon_1 a am:Item , SOMA:Spoon .
+am:plate_1 a am:Item , SOMA:Plate .
+am:glass_1 a am:Item , SOMA:Glass .
+am:fork_1  a am:Item , SOMA:Fork .
+am:knife_1 a am:Item , SOMA:Knife .
+am:bread_1 a am:Item , SOMA:Bread .
+
+# Seconds each item stays where it is, on average. The same value draws the moves in day/world_events.csv, so the
+# AM's staleness is the true chance an item has moved. Chosen: 480.
+am:cup_1   am:persistence 480 .
+am:bowl_1  am:persistence 480 .
+am:spoon_1 am:persistence 480 .
+am:plate_1 am:persistence 480 .
+am:glass_1 am:persistence 480 .
+am:fork_1  am:persistence 480 .
+am:knife_1 am:persistence 480 .
+am:bread_1 am:persistence 480 .

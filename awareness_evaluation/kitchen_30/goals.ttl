@@ -1,0 +1,22 @@
+@prefix dul:  <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#> .
+@prefix am:   <http://example.org/awareness-manager#> .
+
+
+# Three meals; plate, glass and fork are needed by both lunch and dinner.
+am:breakfast a dul:Goal ;
+    am:requires am:cup_present , am:bowl_present , am:spoon_present .
+
+am:lunch a dul:Goal ;
+    am:requires am:plate_present , am:glass_present , am:fork_present , am:bread_present .
+
+am:dinner a dul:Goal ;
+    am:requires am:plate_present , am:glass_present , am:knife_present , am:fork_present .
+
+am:cup_present   a am:Condition ; am:about am:cup_1 .
+am:bowl_present  a am:Condition ; am:about am:bowl_1 .
+am:spoon_present a am:Condition ; am:about am:spoon_1 .
+am:plate_present a am:Condition ; am:about am:plate_1 .
+am:glass_present a am:Condition ; am:about am:glass_1 .
+am:fork_present  a am:Condition ; am:about am:fork_1 .
+am:knife_present a am:Condition ; am:about am:knife_1 .
+am:bread_present a am:Condition ; am:about am:bread_1 .

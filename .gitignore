@@ -4,3 +4,4 @@ awareness/testbed/runs/
 build/
 install/
 log/
+.vscode/

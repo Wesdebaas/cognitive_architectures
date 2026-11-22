@@ -1,0 +1,13 @@
+# Settings for a run in this scenario. Read by simulate, never by the awareness manager.
+
+# Seconds one run lasts: three goals of 20 minutes back to back. Chosen: 3600.
+run_length: 3600
+
+# Days in a run. Chosen: 1.
+days: 1
+
+# Seconds per day hour: a day is 24 of them, as long as the run. Chosen: 150.
+seconds_per_day_hour: 150
+
+# This scenario's own knowledge, asserted when the run starts, in this order.
+knowledge: [goals.ttl, instances.ttl]
