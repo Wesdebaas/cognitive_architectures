@@ -1,6 +1,6 @@
 """Draws where a scenario's items start and when they move, from a seed. Writes day/world.ttl and day/world_events.csv.
 
-ros2 run awareness_evaluation draw_moves <scenario folder> <seed> [uniform | votes]
+ros2 run awareness_evaluation draw_moves <scenario folder> <seed> [uniform | conceptnet]
 """
 
 import random
@@ -14,9 +14,9 @@ from awareness_node.local_kb import LocalKB
 
 AM = 'http://example.org/awareness-manager#'
 
-# uniform: every kind of place ConceptNet links the item to has the same chance. votes: a kind's chance is in proportion
-# to ConceptNet's votes for the item there, the world the AM's relevance assumes.
-PLACEMENTS = ['uniform', 'votes']
+# uniform: every kind of place ConceptNet links the item to has the same chance. conceptnet: a kind's chance is in
+# proportion to ConceptNet's votes for the item there, the world the AM's relevance assumes.
+PLACEMENTS = ['uniform', 'conceptnet']
 
 
 def possible_places(folder, knowledge):
@@ -49,7 +49,7 @@ def draw(rng, kinds, placement, now=None):
     """A kind, by the placement, then one of its places with equal chance; never the place the item is at now."""
     names = sorted(kinds)
     while True:
-        if placement == 'votes':
+        if placement == 'conceptnet':
             kind = rng.choices(names, weights=[kinds[name][1] for name in names])[0]
         else:
             kind = rng.choice(names)

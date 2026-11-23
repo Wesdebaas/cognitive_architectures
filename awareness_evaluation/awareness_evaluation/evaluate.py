@@ -33,7 +33,7 @@ COLUMNS = ['placement', 'persistence', 'seed', 'policy', 'correct', 'wrong', 'un
 def condition(job):
     """Makes the condition's scenario copy, draws its world, runs every policy. Returns one row per policy."""
     scenario, out, placement, persistence, seed = job
-    folder = out / f'{placement}_{persistence}_{seed}'
+    folder = out / f'{placement}_mu{persistence}_seed{seed}'
     shutil.rmtree(folder, ignore_errors=True)
     shutil.copytree(scenario, folder)
     with open(folder / 'run.yaml') as f:

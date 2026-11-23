@@ -3,7 +3,7 @@ and how that place's P is made; RViz shows each step's picture.
 
 ros2 run awareness_evaluation replay <condition or folder> [policy]
 ros2 run awareness_evaluation replay <events file> <places.csv>
-A condition is a folder of the evaluation, e.g. votes_960_2; the policy defaults to awareness_manager. Starts RViz too.
+A condition is a folder of the evaluation, e.g. conceptnet_mu960_seed2; the policy defaults to awareness_manager. Starts RViz too.
 """
 
 import signal

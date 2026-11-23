@@ -17,5 +17,6 @@ setup(
                                       f'steps = {package_name}.steps:main',
                                       f'replay = {package_name}.replay:main',
                                       f'score = {package_name}.score:main',
-                                      f'evaluate = {package_name}.evaluate:main']},
+                                      f'evaluate = {package_name}.evaluate:main',
+                                      f'plot = {package_name}.plot:main']},
 )

@@ -10,6 +10,6 @@ VIEW = EVALUATION / 'view.rviz'
 
 
 def condition(name):
-    """A path that exists as it is; otherwise the evaluation's folder of that name, e.g. votes_960_2."""
+    """A path that exists as it is; otherwise the evaluation's folder of that name, e.g. conceptnet_mu960_seed2."""
     path = Path(name)
     return path if path.exists() else RUNS / name

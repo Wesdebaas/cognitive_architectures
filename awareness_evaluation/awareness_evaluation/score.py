@@ -1,7 +1,7 @@
 """The result of a run: the share of item-seconds in which the robot's looks say where an item really is.
 
 ros2 run awareness_evaluation score <condition, folder or events file> ...
-A condition (e.g. votes_960_2) or folder scores every policy's run in it.
+A condition (e.g. conceptnet_mu960_seed2) or folder scores every policy's run in it.
 """
 
 import sys
