@@ -1,6 +1,10 @@
-"""Knowledge: what the KB says about goals, items, targets, words, action types and persistences."""
+"""Knowledge: stores what is asserted, and reads what the KB says about goals, items, targets, words, action types and
+persistences."""
 
-from .kb import AM, RDFS, short
+import pyoxigraph as ox
+from awareness_msgs.msg import Assertion
+
+from .kb import AM, RDF, RDFS, node, short, stored
 
 
 class Knowledge:
@@ -8,6 +12,20 @@ class Knowledge:
     def __init__(self, kb, claim):
         self.kb = kb
         self.claim = claim   # the claim every belief makes, e.g. present
+        self.assertions = 0
+
+    def assert_knowledge(self, turtle, t):
+        """Store knowledge given as Turtle. Returns the items it introduces."""
+        triples = list(ox.parse(turtle, format=ox.RdfFormat.TURTLE))
+        items = {short(triple.subject) for triple in triples
+                 if triple.predicate == ox.NamedNode(f'{RDF}type') and triple.object == node('Item')}
+        known = {short(row['item']) for row in self.kb.query(f'SELECT ?item WHERE {{ ?item a <{AM}Item> }}')}
+        self.assertions += 1
+        introduced = sorted(items - known)
+        self.kb.write(Assertion(number=self.assertions, t=float(t), introduced=introduced,
+                                triples=ox.serialize(triples, format=ox.RdfFormat.N_TRIPLES).decode()),
+                      stored(f'assertion_{self.assertions}'))
+        return introduced
 
     def reload(self):
         """Read again what an assertion can change."""

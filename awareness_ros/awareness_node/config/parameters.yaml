@@ -17,7 +17,7 @@ alpha: 0.5
 # Chosen: 10.
 find_votes: 10
 
-# An announced goal that has not arrived yet counts 2^(-dt / horizon_halflife) times, dt seconds before its arrival:
+# An expected goal that has not arrived yet counts 2^(-dt / horizon_halflife) times, dt seconds before its arrival:
 # half at this many seconds ahead. Chosen: 300.
 horizon_halflife: 300
 

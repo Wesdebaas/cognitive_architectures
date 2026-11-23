@@ -14,4 +14,4 @@ knowledge: [goals.ttl, instances.ttl]
 
 # Whether the AM is told in advance when each goal arrives. Read by simulate only. Chosen: false, anticipation is
 # left out of this evaluation.
-announce: false
+expect_goals: false

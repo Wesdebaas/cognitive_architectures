@@ -4,7 +4,7 @@ It holds t = 0 until the AM node is ready, so the run does not start without it.
 """
 
 import rclpy
-from awareness_msgs.srv import SetGoal
+from awareness_msgs.srv import SetActiveGoal
 from builtin_interfaces.msg import Time
 from rclpy.node import Node
 from rosgraph_msgs.msg import Clock
@@ -18,7 +18,7 @@ class ClockNode(Node):
         super().__init__('clock')
         self.speed = self.declare_parameter('speed', 10.0).value   # simulation seconds per wall second
         self.publisher = self.create_publisher(Clock, '/clock', 10)
-        self.ready = self.create_client(SetGoal, '/awareness/set_goal')
+        self.ready = self.create_client(SetActiveGoal, '/awareness/set_active_goal')
         self.t = 0.0
         self.create_timer(STEP, self.tick)
 

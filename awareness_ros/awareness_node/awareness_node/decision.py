@@ -5,11 +5,12 @@ from awareness_msgs.msg import Decision as DecisionMessage, GoalWeight, Option, 
 
 class Decision:
 
-    def __init__(self, kb, knowledge, relevance, staleness, priority, transition_cost, parameters):
+    def __init__(self, kb, knowledge, relevance, staleness, goals, priority, transition_cost, parameters):
         self.kb = kb
         self.knowledge = knowledge
         self.relevance = relevance
         self.staleness = staleness
+        self.goals = goals
         self.priority = priority
         self.transition_cost = transition_cost   # (from, to) -> seconds, or None if unreachable
         self.parameters = parameters
@@ -38,10 +39,10 @@ class Decision:
             return
         self.waiting = chosen is None
         self.decisions += 1
-        weights, needs = self.priority.goal_weights(t), self.relevance.goal_beliefs
+        weights, needs = self.goals.weights(t), self.relevance.goal_beliefs
         beliefs = sorted(set().union(*(needs[goal] for goal in weights)))
         self.kb.write(DecisionMessage(
-            number=self.decisions, t=float(t), position=position, goal=self.priority.goal or '',
+            number=self.decisions, t=float(t), position=position, goal=self.goals.active or '',
             chosen_action=chosen[0] if chosen else '', chosen_target=chosen[1] if chosen else '',
             options=[Option(action=action_type, target=target, priority=float(p), reachable=c is not None,
                             cost=float(c) if c is not None else 0.0, utility=float(p / c) if c is not None else 0.0)

@@ -9,13 +9,13 @@ The AM chooses the action with the highest utility:
 |---|---|---|
 | E | staleness: how outdated a belief's last observation is | 1 − e^(−Δt/μ), Δt since that observation; 1 if never observed |
 | μ | persistence: the average time before an item moves | seconds, set per item |
-| A | relevance of a belief to the goals that need its item | ConceptNet's votes for the item at the place, and earlier finds there |
-| goal weight | how much a goal counts now | 1 if active, less if announced for later; summed over the goals that need the item |
+| A | relevance: how strongly the evidence links the item to the place | ConceptNet's votes for the item at the place, and earlier finds there |
+| goal weight | how much a goal counts now | 1 if active, less if expected later; summed over the goals that need the item |
 | P = Σ E·A·goal weight | priority of an action | summed over the beliefs it observes |
 | C | cost of an action | seconds to drive there and observe |
 | U = P / C | utility of an action | priority per second |
 
-At the start of the kitchen scenario, breakfast, coffee and dinner are announced and nothing is observed yet, so every E is 1.
+At the start of the kitchen scenario, breakfast, coffee and dinner are expected and nothing is observed yet, so every E is 1.
 ConceptNet relates plates (A = 0.77) and cups (A = 0.41) to tables. `table_1` has the highest P, 1.6, and at 32 s also the
 highest U, so it is observed first. After that its E drops and `cupboard_1` follows.
 
@@ -69,9 +69,9 @@ ros2 launch awareness_gazebo run.launch.py                       # the same scen
 The AM prints each decision and what it observed. From the first command, log prefixes removed:
 
 ```
-announced: breakfast at 90
-announced: coffee at 240
-announced: dinner at 330
+expected: breakfast at 90
+expected: coffee at 240
+expected: dinner at 330
 at dock: inspect table_1  P = 1.623  C = 32  U = 0.0507
 inspect table_1: cup_1; found, 1 beliefs changed
 at table_1: inspect cupboard_1  P = 1.017  C = 34  U = 0.0299
@@ -146,8 +146,8 @@ sequenceDiagram
     AM->>KB: replace beliefs
 
     Note over S,KB: The goals to expect
-    S->>AM: announce each goal's arrival time
-    AM->>KB: insert announcements
+    S->>AM: expect each goal at its arrival time
+    AM->>KB: insert expected goals
 ```
 
 <details>
@@ -157,13 +157,13 @@ sequenceDiagram
 |---|---|---|
 | 1 | The KB loads what every scenario shares: SOMA's classes, their ConceptNet words, and the action types. | `preload_files` in `triplestar.yaml` |
 | 2 | The AM reads its parameters (`parameters.yaml`), the robot's speed and start position (`robot.yaml`), and where the places are (`places.csv`), for the travel times. | `build.awareness_manager`, `AwarenessNode.__init__` |
-| 3, 4 | The goals and the items they need. Each assertion is also recorded in the graph `am:observations`, with the items it introduces. | `ScenarioNode.call_assert_knowledge`, `Observations.assert_knowledge` |
+| 3, 4 | The goals and the items they need. Each assertion is also recorded in the graph `am:observations`, with the items it introduces. | `ScenarioNode.call_assert_knowledge`, `Knowledge.assert_knowledge` |
 | 5, 6 | The places, the items with their classes, and their persistence μ (`am:persistence`). | same as 3, 4 |
 | 7 | Steps 7 to 10 run when the AM starts, after every assertion, and after every find. Drawn once: before step 6 they give no actions and no beliefs, as there are no places yet and the items have no class. | `Knowledge.reload`, `Relevance.beliefs` |
 | 8 | One action per action type and place it applies to, e.g. inspect table_1. Kept in the AM, not in the KB. | `Knowledge.actions_observing` |
 | 9 | One belief per needed item and place ConceptNet links it to. A comes from ConceptNet's votes, read from a file. | `Relevance.beliefs` |
 | 10 | The beliefs replace the previous ones in the graph `am:derived`. | `Relevance.update` |
-| 11, 12 | When each goal will arrive, one call per arrival. After this the scenario's timetable sets the goals. | `ScenarioNode.tick`, `Observations.announce` |
+| 11, 12 | When each goal will arrive, one call per arrival. After this the scenario's timetable sets the active goal, which is stored in the KB too. | `ScenarioNode.tick`, `Goals.expect` |
 
 In the kitchen scenario 4 actions and 10 beliefs follow.
 

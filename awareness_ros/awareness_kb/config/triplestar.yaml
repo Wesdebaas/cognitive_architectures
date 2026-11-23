@@ -20,8 +20,11 @@ insertion_subscribers:
   - topic: "/awareness/observations"
     template: "insert-observation.sparql.tmpl"
 
-  - topic: "/awareness/announcements"
-    template: "insert-announcement.sparql.tmpl"
+  - topic: "/awareness/expected_goals"
+    template: "insert-expected-goal.sparql.tmpl"
+
+  - topic: "/awareness/active_goals"
+    template: "insert-active-goal.sparql.tmpl"
 
   - topic: "/awareness/assertions"
     template: "insert-assertion.sparql.tmpl"

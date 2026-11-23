@@ -4,7 +4,7 @@ import time
 
 import pyoxigraph as ox
 import rclpy
-from awareness_msgs.msg import Announcement, Assertion, Beliefs, Decision, Observation
+from awareness_msgs.msg import ActiveGoal, Assertion, Beliefs, Decision, ExpectedGoal, Observation
 from rclpy.executors import SingleThreadedExecutor
 from triplestar_msgs.srv import SPARQLQuery
 
@@ -13,11 +13,12 @@ RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
 RDFS = 'http://www.w3.org/2000/01/rdf-schema#'
 DERIVED = ox.NamedNode(f'{AM}derived')
 OBSERVATIONS = ox.NamedNode(f'{AM}observations')
-DECISIONS = ox.NamedNode(f'{AM}decisions')
+GOALS = ox.NamedNode(f'{AM}goals')
 
 SERVICE = '/triplestar/sparql'
-TOPICS = {Observation: '/awareness/observations', Announcement: '/awareness/announcements',
-          Assertion: '/awareness/assertions', Beliefs: '/awareness/beliefs', Decision: '/awareness/decisions'}
+TOPICS = {Observation: '/awareness/observations', ExpectedGoal: '/awareness/expected_goals',
+          ActiveGoal: '/awareness/active_goals', Assertion: '/awareness/assertions', Beliefs: '/awareness/beliefs',
+          Decision: '/awareness/decisions'}
 
 
 def short(term):

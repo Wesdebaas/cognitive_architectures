@@ -1,6 +1,7 @@
 """The awareness manager: decides what the robot should observe next."""
 
 from .decision import Decision
+from .goals import Goals
 from .knowledge import Knowledge
 from .observations import Observations
 from .priority import Priority
@@ -16,34 +17,33 @@ class AwarenessManager:
         self.relevance = Relevance(kb, self.knowledge, association, parameters)
         self.observations = Observations(kb, self.knowledge)
         self.staleness = Staleness(self.knowledge, self.observations, parameters)
-        self.priority = Priority(kb, self.knowledge, self.staleness, parameters)
-        self.decision = Decision(kb, self.knowledge, self.relevance, self.staleness, self.priority, transition_cost,
-                                 parameters)
+        self.goals = Goals(kb, self.knowledge, parameters)
+        self.priority = Priority(kb, self.knowledge, self.staleness, self.goals)
+        self.decision = Decision(kb, self.knowledge, self.relevance, self.staleness, self.goals, self.priority,
+                                 transition_cost, parameters)
 
     def start(self):
         self.update_beliefs()
-        self.priority.goal = None
 
     def update_beliefs(self):
         """Returns (added, removed, changed) beliefs."""
         self.knowledge.reload()
         changes = self.relevance.update()
+        self.goals.clear()
         self.priority.clear()
         return changes
 
     def assert_knowledge(self, turtle, t):
-        self.observations.assert_knowledge(turtle, t)
+        """Earlier empty observations no longer count for the items it introduces; earlier sightings still do."""
+        introduced = self.knowledge.assert_knowledge(turtle, t)
+        self.observations.forget(items=introduced)
         return self.update_beliefs()
 
-    def announce(self, goal, t):
-        self.observations.announce(goal, t)
-        self.priority.clear()
+    def expect_goal(self, goal, arrival):
+        self.goals.expect(goal, arrival)
 
-    def set_goal(self, goal):
-        """None for no active goal. What was observed for one goal counts for the next."""
-        if goal is not None and goal not in self.knowledge.goals:
-            raise ValueError(f'unknown goal {goal}')
-        self.priority.goal = goal
+    def set_active_goal(self, goal, t):
+        self.goals.set_active(goal, t)
 
     def observe(self, action, values, t):
         """A find is evidence for its belief, so the beliefs are updated."""

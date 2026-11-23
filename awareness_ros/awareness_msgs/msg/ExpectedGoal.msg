@@ -1,4 +1,4 @@
-# A goal that will arrive at a given time, stored in am:observations.
+# A goal that will arrive at a given time, stored in am:goals.
 
 uint32 number    # 1, 2, ... in order
 string goal      # e.g. lunch

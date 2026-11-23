@@ -1,8 +1,8 @@
-"""The awareness manager as a ROS node: takes goals, announcements and knowledge, and sends actions to the executor."""
+"""The awareness manager as a ROS node: takes goals and knowledge, and sends actions to the executor."""
 
 import rclpy
 from awareness_msgs.action import Execute
-from awareness_msgs.srv import Announce, AssertKnowledge, SetGoal
+from awareness_msgs.srv import AssertKnowledge, ExpectGoal, SetActiveGoal
 from rclpy.action import ActionClient
 from rclpy.node import Node
 
@@ -23,8 +23,8 @@ class AwarenessNode(Node):
         self.action = None   # the action the executor is carrying out
         self.idle = False
         self.execute = ActionClient(self, Execute, '/execute')
-        self.create_service(SetGoal, '/awareness/set_goal', self.set_goal)
-        self.create_service(Announce, '/awareness/announce', self.announce)
+        self.create_service(SetActiveGoal, '/awareness/set_active_goal', self.set_active_goal)
+        self.create_service(ExpectGoal, '/awareness/expect_goal', self.expect_goal)
         self.create_service(AssertKnowledge, '/awareness/assert_knowledge', self.assert_knowledge)
         self.create_timer(1.0, self.tick)
         self.get_logger().info(f'ready at {self.position}, {len(self.am.relevance.a)} beliefs')
@@ -32,19 +32,19 @@ class AwarenessNode(Node):
     def now(self):
         return self.get_clock().now().nanoseconds / 1e9
 
-    def set_goal(self, request, response):
+    def set_active_goal(self, request, response):
         try:
-            self.am.set_goal(request.goal or None)
+            self.am.set_active_goal(request.goal or None, self.now())
             response.success = True
-            self.get_logger().info(f'goal: {request.goal or "none"}')
+            self.get_logger().info(f'active goal: {request.goal or "none"}')
         except ValueError as error:
             response.success, response.message = False, str(error)
-            self.get_logger().warning(f'goal {request.goal} is unknown; {self.am.priority.goal} stays active')
+            self.get_logger().warning(f'goal {request.goal} is unknown; {self.am.goals.active} stays active')
         return response
 
-    def announce(self, request, response):
-        self.am.announce(request.goal, request.arrival)
-        self.get_logger().info(f'announced: {request.goal} at {request.arrival:g}')
+    def expect_goal(self, request, response):
+        self.am.expect_goal(request.goal, request.arrival)
+        self.get_logger().info(f'expected: {request.goal} at {request.arrival:g}')
         return response
 
     def assert_knowledge(self, request, response):

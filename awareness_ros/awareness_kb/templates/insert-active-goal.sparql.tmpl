@@ -1,0 +1,10 @@
+PREFIX am: <http://example.org/awareness-manager#>
+
+INSERT DATA { GRAPH am:goals {
+  am:active_goal_{{ msg.number }} a am:ActiveGoal ;
+      am:number {{ msg.number | rdf }} ;
+      am:t {{ msg.t | rdf }} .
+  {% if msg.goal %}
+  am:active_goal_{{ msg.number }} am:goal am:{{ msg.goal }} .
+  {% endif %}
+} }

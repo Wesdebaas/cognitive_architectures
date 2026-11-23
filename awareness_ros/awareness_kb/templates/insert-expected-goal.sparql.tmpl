@@ -1,7 +1,7 @@
 PREFIX am: <http://example.org/awareness-manager#>
 
-INSERT DATA { GRAPH am:observations {
-  am:announcement_{{ msg.number }} a am:Announcement ;
+INSERT DATA { GRAPH am:goals {
+  am:expected_goal_{{ msg.number }} a am:ExpectedGoal ;
       am:goal am:{{ msg.goal }} ;
       am:arrival {{ msg.arrival | rdf }} .
 } }

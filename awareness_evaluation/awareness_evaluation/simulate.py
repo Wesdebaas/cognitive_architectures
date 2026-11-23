@@ -1,7 +1,7 @@
 """The awareness manager, or the round robin baseline, run through a scenario without ROS nodes: one program, one
 second at a time, on LocalKB. Writes events.jsonl, one JSON object per line: what the world did (start, goal, move, look,
-night, end) and every message the AM wrote to its KB (decision, observation, beliefs, assertion, announcement); round
-robin writes its own decisions.
+night, end) and every message the AM wrote to its KB (decision, observation, beliefs, assertion, expectedgoal,
+activegoal); round robin writes its own decisions.
 
 ros2 run awareness_evaluation simulate <scenario's day folder> <events file> [policy]
 policy: awareness_manager (the default), round_robin_item_places or round_robin_all_places
@@ -65,22 +65,22 @@ def run(folder, events, policy='awareness_manager'):
         am.assert_knowledge((folder.parent / name).read_text(), 0)
     chooser = am if policy == 'awareness_manager' else RoundRobin(am, record,
                                                                     every_place=policy == 'round_robin_all_places')
-    if run.get('announce', True):
+    if run.get('expect_goals', True):
         for arrival, goal in arrivals:
-            am.announce(goal, arrival)
+            am.expect_goal(goal, arrival)
 
     for t in range(int(entries[-1][0]) + 1):
         kb.t = t
         while entries and entries[0][0] <= t:
             _, kind, value = entries.pop(0)
             if kind == NIGHT:
-                am.set_goal(None)
+                am.set_active_goal(None, t)
                 record('night', t)
             elif kind == ASSERTION:
                 am.assert_knowledge((folder / value).read_text(), t)
             elif kind == GOAL:
                 try:
-                    am.set_goal(value)
+                    am.set_active_goal(value, t)
                     record('goal', t, goal=value, known=True, needs=sorted(needs[value]))
                 except ValueError:
                     record('goal', t, goal=value, known=False)

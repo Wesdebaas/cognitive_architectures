@@ -5,22 +5,23 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/Announcement.msg"
+  "msg/ActiveGoal.msg"
   "msg/Assertion.msg"
   "msg/Assessment.msg"
   "msg/Belief.msg"
   "msg/Beliefs.msg"
   "msg/Decision.msg"
   "msg/Edge.msg"
+  "msg/ExpectedGoal.msg"
   "msg/GoalWeight.msg"
   "msg/Observation.msg"
   "msg/Option.msg"
   "msg/Report.msg"
   "msg/Staleness.msg"
-  "srv/Announce.srv"
   "srv/AssertKnowledge.srv"
+  "srv/ExpectGoal.srv"
   "srv/Inspect.srv"
-  "srv/SetGoal.srv"
+  "srv/SetActiveGoal.srv"
   "action/Execute.action"
 )
 

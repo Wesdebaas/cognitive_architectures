@@ -1,9 +1,8 @@
-"""Observations: what was observed, asserted and announced, and what the last observation of a belief said."""
+"""Observations: what was observed, and what the last observation of a belief said."""
 
-import pyoxigraph as ox
-from awareness_msgs.msg import Announcement, Assertion, Observation, Report
+from awareness_msgs.msg import Observation, Report
 
-from .kb import AM, OBSERVATIONS, RDF, node, short, stored, value
+from .kb import AM, OBSERVATIONS, short, stored, value
 
 
 class Observations:
@@ -13,8 +12,6 @@ class Observations:
         self.knowledge = knowledge
         self.observed = {}   # belief -> its last observation, until forget drops it
         self.observations = 0
-        self.assertions = 0
-        self.announcements = 0
 
     def observe(self, action, values, t):
         """Store what an action reported, {item: value}. Returns the finds: items reported true where the last
@@ -33,26 +30,6 @@ class Observations:
             items |= {item for item in known if self.missed(item) == (target, float(t))}
         self.forget(target=target, items=items)
         return found
-
-    def assert_knowledge(self, turtle, t):
-        """Store knowledge given as Turtle, with the items it introduces. Earlier empty observations no longer count
-        for those items; earlier sightings still do."""
-        triples = list(ox.parse(turtle, format=ox.RdfFormat.TURTLE))
-        items = {short(triple.subject) for triple in triples
-                 if triple.predicate == ox.NamedNode(f'{RDF}type') and triple.object == node('Item')}
-        known = {short(row['item']) for row in self.kb.query(f'SELECT ?item WHERE {{ ?item a <{AM}Item> }}')}
-        self.assertions += 1
-        introduced = sorted(items - known)
-        self.kb.write(Assertion(number=self.assertions, t=float(t), introduced=introduced,
-                                triples=ox.serialize(triples, format=ox.RdfFormat.N_TRIPLES).decode()),
-                      stored(f'assertion_{self.assertions}'))
-        self.forget(items=set(introduced))
-
-    def announce(self, goal, t):
-        """Store that the goal will arrive at time t."""
-        self.announcements += 1
-        self.kb.write(Announcement(number=self.announcements, goal=goal, arrival=float(t)),
-                      stored(f'announcement_{self.announcements}'))
 
     def last_observation(self, belief):
         """(t, value) of the last observation of the belief, or None."""
