@@ -1,5 +1,5 @@
 """Every condition of the evaluation: per placement, persistence and seed, a copy of the scenario with its own world,
-run by every policy and scored. Prints the means per condition and writes every run's score to results.csv.
+run by every policy and scored. Prints the means and writes every run's scores to results.csv.
 
 ros2 run awareness_evaluation evaluate [scenario folder] [output folder]
 Defaults: awareness_evaluation/kitchen_30 and awareness_evaluation/runs/evaluation.
@@ -16,7 +16,7 @@ import yaml
 
 from .draw_moves import PLACEMENTS, write_world
 from .paths import RUNS, SCENARIO
-from .score import result
+from .score import MINUTES, result, since_start
 from .simulate import POLICIES, run
 from .steps import read
 
@@ -27,7 +27,9 @@ PERSISTENCES = [240, 480, 960, 1920]
 # Chosen: 5, enough to see whether one policy wins in most seeds; every seed's score is in results.csv.
 SEEDS = [1, 2, 3, 4, 5]
 
-COLUMNS = ['placement', 'persistence', 'seed', 'policy', 'correct', 'wrong', 'unknown', 'all items']
+SHARES = ['correct', 'wrong', 'unknown', 'all items']
+COLUMNS = ['placement', 'persistence', 'seed', 'policy'] + SHARES + ['all found'] \
+    + [f'minute {m + 1}' for m in range(MINUTES)]
 
 
 def condition(job):
@@ -51,7 +53,9 @@ def condition(job):
         with open(events, 'w') as f:
             run(folder / 'day', f, policy)
         share = result(read(events))
-        rows.append([placement, persistence, seed, policy] + [round(share[column], 1) for column in COLUMNS[4:]])
+        minutes, found = since_start(read(events))
+        rows.append([placement, persistence, seed, policy] + [round(share[column], 1) for column in SHARES]
+                    + [round(found)] + [round(minute, 1) for minute in minutes])
     return rows
 
 
@@ -68,19 +72,19 @@ def main():
         writer.writerow(COLUMNS)
         writer.writerows(rows)
 
-    am = POLICIES[0]
-    print(f'needed items correct, mean of {len(SEEDS)} seeds; {am} - round robin, and in how many seeds the AM is higher')
-    print(f"{'placement':>10s}{'persistence':>12s}" + ''.join(f'{policy:>25s}' for policy in POLICIES)
-          + ''.join(f'{"AM - " + policy.removeprefix("round_robin_"):>20s}' for policy in POLICIES[1:]))
+    def mean(column, placement, policy, persistence=None):
+        values = [row[COLUMNS.index(column)] for row in rows
+                  if row[0] == placement and row[3] == policy and persistence in (None, row[1])]
+        return sum(values) / len(values)
+
+    print(f'{"":>28s}' + ''.join(f'{policy:>36s}' for policy in POLICIES))
     for placement in PLACEMENTS:
+        print(f'{placement}\nneeded items correct (%)')
         for persistence in PERSISTENCES:
-            correct = {policy: {row[2]: row[4] for row in rows if row[:2] == [placement, persistence] and row[3] == policy}
-                       for policy in POLICIES}
-            line = f'{placement:>10s}{persistence:>12d}'
-            line += ''.join(f'{sum(correct[policy].values()) / len(SEEDS):24.1f}%' for policy in POLICIES)
-            for policy in POLICIES[1:]:
-                gap = sum(correct[am][seed] - correct[policy][seed] for seed in SEEDS) / len(SEEDS)
-                wins = sum(correct[am][seed] > correct[policy][seed] for seed in SEEDS)
-                line += f'{gap:+12.1f}  ({wins}/{len(SEEDS)})'
-            print(line)
+            print(f'{"mu = " + str(persistence):>28s}'
+                  + ''.join(f'{mean("correct", placement, policy, persistence):36.1f}' for policy in POLICIES))
+        print(f'{"first 5 min of a goal (%)":>28s}' + ''.join(
+            f'{sum(mean(f"minute {m}", placement, policy) for m in range(1, 6)) / 5:36.1f}' for policy in POLICIES))
+        print(f'{"until all are found (s)":>28s}'
+              + ''.join(f'{mean("all found", placement, policy):36.0f}' for policy in POLICIES))
     print(f'every run: {out / "results.csv"}')

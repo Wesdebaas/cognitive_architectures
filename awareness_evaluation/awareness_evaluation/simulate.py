@@ -4,7 +4,8 @@ night, end) and every message the AM wrote to its KB (decision, observation, bel
 activegoal); round robin writes its own decisions.
 
 ros2 run awareness_evaluation simulate <scenario's day folder> <events file> [policy]
-policy: awareness_manager (the default), round_robin_item_places or round_robin_all_places
+policy: awareness_manager (the default), awareness_manager_no_anticipation, round_robin_item_places or
+round_robin_all_places
 """
 
 import json
@@ -19,8 +20,9 @@ from rosidl_runtime_py.convert import message_to_ordereddict
 
 from .round_robin import RoundRobin
 
-# The AM, and round robin over the places an item can be or over every place.
-POLICIES = ['awareness_manager', 'round_robin_item_places', 'round_robin_all_places']
+# The AM, the AM that is not told which goals to expect, and round robin over the places an item can be or over every
+# place.
+POLICIES = ['awareness_manager', 'awareness_manager_no_anticipation', 'round_robin_item_places', 'round_robin_all_places']
 
 
 class RecordingKB(LocalKB):
@@ -58,9 +60,9 @@ def run(folder, events, policy='awareness_manager'):
     am.start()
     for name in run['knowledge']:
         am.assert_knowledge((folder.parent / name).read_text(), 0)
-    chooser = am if policy == 'awareness_manager' else RoundRobin(am, record,
-                                                                    every_place=policy == 'round_robin_all_places')
-    if run.get('expect_goals', True):
+    chooser = RoundRobin(am, record, every_place=policy == 'round_robin_all_places') \
+        if policy.startswith('round_robin') else am
+    if policy == 'awareness_manager':
         for arrival, goal in arrivals:
             am.expect_goal(goal, arrival)
 

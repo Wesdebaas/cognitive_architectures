@@ -81,11 +81,11 @@ Times and C are in seconds of simulation time. Gazebo shows only the robot and t
 
 ## Evaluation
 
-Compares the AM with two round robins, which observe places in turn, in `kitchen_30`, a kitchen with 30 places.
+Compares the AM with itself without anticipation, and with two round robins, which observe places in turn, in `kitchen_30`, a kitchen with 30 places.
 
 ```bash
-ros2 run awareness_evaluation evaluate                           # 120 runs, about 3 minutes: prints a table, writes results.csv
-ros2 run awareness_evaluation plot                               # correct.png and states.png, from results.csv
+ros2 run awareness_evaluation evaluate                           # 160 runs, about 7 minutes: prints a table, writes results.csv
+ros2 run awareness_evaluation plot                               # correct.png, states.png and since_start.png, from results.csv
 ros2 run awareness_evaluation score conceptnet_mu960_seed2       # one condition, per policy
 ros2 run awareness_evaluation replay conceptnet_mu960_seed2      # step through the AM's run, with RViz
 ```
@@ -95,14 +95,20 @@ Run `evaluate` first; everything is written to `awareness_evaluation/runs/evalua
 
 | | Values |
 |---|---|
-| placement | where items start and move to. `uniform`: every kind of place related to the item is equally likely; `conceptnet`: likelier with more ConceptNet votes |
+| placement | where items start and move to. `conceptnet`, items placed by ConceptNet votes: likelier at places with more votes; `uniform`, items placed evenly, ignoring votes: every kind of place related to the item is equally likely |
 | μ | 240, 480, 960 or 1920 s |
 | seed | 1 to 5, for the random draws |
-| policy | `awareness_manager`; `round_robin_item_places`: the places with beliefs; `round_robin_all_places`: all places |
+| policy | `awareness_manager`; `awareness_manager_no_anticipation`: not told which goals to expect; `round_robin_item_places`: the places with beliefs; `round_robin_all_places`: all places |
 
 Measure: while a goal is active, the share of time in which the observations place the items it needs where they really are
 (`correct`), elsewhere (`wrong`) or nowhere (`unknown`: not yet observed, or missing where last observed), averaged over
 those items. `all items`: `correct` for every item, the whole run.
+
+Second measure: `correct` per minute since a goal became active, and the seconds until all items it needs are correct at once.
+
+![Needed items correct per minute since the goal became active](docs/results/since_start.png)
+
+Mean of the goals, persistences and seeds.
 
 ![The replay window and RViz](docs/architecture/replay_window_rviz.png)
 

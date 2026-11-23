@@ -12,6 +12,9 @@ from .steps import read, steps
 
 STATES = ['correct', 'wrong', 'unknown']
 
+# Minutes after a goal becomes active that since_start looks at. Chosen: 20, how long a goal in kitchen_30 is active.
+MINUTES = 20
+
 
 def state(step, item):
     """correct: the looks say where the item is; wrong: they say another place; unknown: they say nothing."""
@@ -45,6 +48,27 @@ def result(events):
     return share
 
 
+def since_start(events):
+    """(percent correct per minute since a goal became active, seconds until every item it needs is correct at once), the
+    means over the goals. A goal for which that never happens counts its whole length."""
+    run = steps(events)
+    goals = []   # per goal: [(from, until, share of the needed items correct)]
+    for step, following in zip(run, run[1:]):
+        if not step['needs']:
+            continue
+        if step['happened'] == f"goal: {step['goal']}":
+            goals.append([])
+        share = sum(state(step, item) == 'correct' for item in step['needs']) / len(step['needs'])
+        goals[-1].append((step['t'], following['t'], share))
+    minutes, found = [], []
+    for goal in goals:
+        start = goal[0][0]
+        minutes.append([100 / 60 * sum(share * max(0, min(until, start + m + 60) - max(since, start + m))
+                                       for since, until, share in goal) for m in range(0, MINUTES * 60, 60)])
+        found.append(next((since for since, until, share in goal if share == 1 and until > since), goal[-1][1]) - start)
+    return [sum(minute) / len(goals) for minute in zip(*minutes)], sum(found) / len(goals)
+
+
 def percent(counts, which='correct'):
     return 100 * counts[which] / sum(counts.values())
 
@@ -55,9 +79,9 @@ def table(files):
         events = read(file)
         rows.append((events[0]['policy'], result(events)))
     columns = list(rows[0][1])
-    print(f'{"policy":>25s}' + ''.join(f'{cell:>12s}' for cell in columns))
+    print(f'{"policy":>36s}' + ''.join(f'{cell:>12s}' for cell in columns))
     for policy, share in rows:
-        print(f'{policy:>25s}' + ''.join(f'{share[column]:11.1f}%' for column in columns))
+        print(f'{policy:>36s}' + ''.join(f'{share[column]:11.1f}%' for column in columns))
 
 
 def main():
