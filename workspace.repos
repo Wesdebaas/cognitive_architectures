@@ -7,11 +7,6 @@ repositories:
     url: https://github.com/kas-lab/triplestar_kb.git
     version: 996853e16aedf796296185f6dfc50c5c19711d17   # branch: main
 
-  yolo_ros:
-    type: git
-    url: https://github.com/mgonzs13/yolo_ros.git
-    version: 4b2796c8d11bd62457c715f5c8c79afcc6a865ea
-
   mirte-ros-packages:
     type: git
     url: https://github.com/Juancams/mirte-ros-packages.git
@@ -26,11 +21,6 @@ repositories:
     type: git
     url: https://github.com/Juancams/aws-robomaker-small-house-world.git
     version: 37c0bf89ddcd5fc6cafbe011a86fdd93087c95d6   # branch: ros2-jazzy
-
-  aws-robomaker-small-warehouse-world:
-    type: git
-    url: https://github.com/Juancams/aws-robomaker-small-warehouse-world.git
-    version: a8ba1cea777799d51db58f759e4d2cfa2c81fd74   # branch: ros2-jazzy
 
   soma:
     type: git
