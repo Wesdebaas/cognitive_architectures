@@ -112,13 +112,16 @@ them (blue, above), with the robot and its way to the chosen place.
 
 ## Architecture
 
-![The run without Gazebo](docs/architecture/ros_architecture.png)
+![The ROS nodes](docs/architecture/1-ROS-nodes.png)
 
-The ROS nodes of the run without Gazebo. The executor carries out the AM's actions; in Gazebo another executor drives the robot.
+**ROS nodes.** The scenario tells the AM what exists (`assert_knowledge`), which goals to expect and when (`expect_goal`), and
+which goal is active (`set_active_goal`). The executor is a stand-in, or in Gazebo drives with Nav2. Targets are places. Not
+drawn: the answers of the scenario's services, the KB queries, and the clock.
 
-![Inside the AM node](docs/architecture/ros_architecture_am_zoomed.png)
+![Inside the AM](docs/architecture/2-Inside-the-AM.png)
 
-The parts of the AM, and what they exchange with each other and the KB.
+**Inside the AM.** What comes in is stored in the KB, and read back when needed. Not drawn: the preloaded files, the
+parameters, the current time, and what is only recorded with a decision.
 
 ### Start-up
 
