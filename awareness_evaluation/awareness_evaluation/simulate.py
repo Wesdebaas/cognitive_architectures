@@ -17,7 +17,6 @@ from awareness_node.local_kb import LocalKB
 from awareness_scenario.timeline import ASSERTION, GOAL, NIGHT, World, settings, timetable
 from rosidl_runtime_py.convert import message_to_ordereddict
 
-from .draw_moves import AM, query
 from .round_robin import RoundRobin
 
 # The AM, and round robin over the places an item can be or over every place.
@@ -52,10 +51,6 @@ def run(folder, events, policy='awareness_manager'):
     world = World(folder)
     arrivals, entries = timetable(folder)
     run = settings(folder)
-    needs = {}
-    for goal, item in query(folder.parent, run['knowledge'],
-                            f'SELECT ?a ?b WHERE {{ ?a <{AM}requires> ?c . ?c <{AM}about> ?b }}'):
-        needs.setdefault(goal, []).append(item)
     position, action, started, ends = robot['start_position'], None, None, None
 
     record('start', 0, position=position, locations=dict(sorted(world.where.items())),
@@ -81,7 +76,7 @@ def run(folder, events, policy='awareness_manager'):
             elif kind == GOAL:
                 try:
                     am.set_active_goal(value, t)
-                    record('goal', t, goal=value, known=True, needs=sorted(needs[value]))
+                    record('goal', t, goal=value, known=True, needs=sorted(am.knowledge.items(value)))
                 except ValueError:
                     record('goal', t, goal=value, known=False)
 

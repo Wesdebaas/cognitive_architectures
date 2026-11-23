@@ -20,6 +20,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.signals import SignalHandlerOptions
 
 AM = 'http://example.org/awareness-manager#'
 
@@ -28,6 +29,7 @@ class ExecutorNode(Node):
 
     def __init__(self):
         super().__init__('executor')
+        self.stopping = False
         scenario = self.declare_parameter('scenario', 'household').value
         self.position = self.declare_parameter('start_position', 'dock').value
         self.speed = self.declare_parameter('speed', 0.5).value   # metres per second, as the AM assumes
@@ -60,25 +62,39 @@ class ExecutorNode(Node):
             return Execute.Result(success=False)
         self.get_logger().info(f'{action_type} {target}: {seconds:g} s')
         end = self.get_clock().now() + Duration(seconds=seconds)
-        while self.get_clock().now() < end:   # checks every 10 ms, so a shutdown is noticed while waiting
-            if not rclpy.ok():
-                handle.abort()
-                return Execute.Result(success=False)
-            time.sleep(0.01)
-        items = self.inspect.call(Inspect.Request(target=target)).items
+        if not self.wait_until(lambda: self.get_clock().now() >= end):
+            handle.abort()
+            return Execute.Result(success=False)
+        answer = self.inspect.call_async(Inspect.Request(target=target))
+        if not self.wait_until(answer.done):
+            handle.abort()
+            return Execute.Result(success=False)
+        items = answer.result().items
         self.position = target
         handle.succeed()
         return Execute.Result(success=True, assessed=[Assessment(item=item, value=True) for item in items])
 
+    def wait_until(self, condition):
+        """Checks every 10 ms, so a shutdown is noticed while waiting. False on shutdown."""
+        while not condition():
+            if self.stopping:
+                return False
+            time.sleep(0.01)
+        return True
+
 
 def main():
-    rclpy.init()
+    # ROS stays up after Ctrl-C, so the action being carried out can still be aborted.
+    rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
     node = ExecutorNode()
     executor = MultiThreadedExecutor()
     executor.add_node(node)
     try:
-        executor.spin()
+        while True:
+            executor.spin_once(timeout_sec=0.1)
     except KeyboardInterrupt:
-        pass
+        node.stopping = True
+    time.sleep(0.1)   # the running callbacks end first: shutdown does not wait for them
+    executor.shutdown()
     node.destroy_node()
     rclpy.try_shutdown()

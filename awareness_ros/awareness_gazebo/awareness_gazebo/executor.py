@@ -18,6 +18,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.signals import SignalHandlerOptions
 
 AM = 'http://example.org/awareness-manager#'
 SUCCEEDED = 4   # action_msgs/GoalStatus
@@ -27,6 +28,7 @@ class ExecutorNode(Node):
 
     def __init__(self):
         super().__init__('executor')
+        self.stopping = False
         scenario = self.declare_parameter('scenario', 'kitchen').value
         with open(Path(get_package_share_directory('awareness_scenario')) / scenario / 'places.csv') as f:
             self.poses = {row['place']: (float(row['x']), float(row['y']), float(row['yaw'])) for row in csv.DictReader(f)}
@@ -58,7 +60,11 @@ class ExecutorNode(Node):
                                self.get_clock().now() >= end):
             handle.abort()
             return Execute.Result(success=False)
-        items = self.inspect.call(Inspect.Request(target=target)).items
+        answer = self.inspect.call_async(Inspect.Request(target=target))
+        if not self.wait_until(answer.done):
+            handle.abort()
+            return Execute.Result(success=False)
+        items = answer.result().items
         self.get_logger().info(f'{action_type} {target}: drove {driven:.0f} s, saw {", ".join(items) or "nothing"}')
         handle.succeed()
         return Execute.Result(success=True, assessed=[Assessment(item=item, value=True) for item in items])
@@ -70,31 +76,35 @@ class ExecutorNode(Node):
         goal.pose.header.frame_id = 'map'
         goal.pose.pose.position.x, goal.pose.pose.position.y = x, y
         goal.pose.pose.orientation.z, goal.pose.pose.orientation.w = math.sin(yaw / 2), math.cos(yaw / 2)
-        self.navigate.wait_for_server()
+        if not self.wait_until(self.navigate.server_is_ready):
+            return False
         sent = self.navigate.send_goal_async(goal)
         if not self.wait_until(sent.done) or not sent.result().accepted:
             return False
         result = sent.result().get_result_async()
         return self.wait_until(result.done) and result.result().status == SUCCEEDED
 
-    @staticmethod
-    def wait_until(condition):
+    def wait_until(self, condition):
         """Checks every 10 ms, so a shutdown is noticed while waiting. False on shutdown."""
         while not condition():
-            if not rclpy.ok():
+            if self.stopping:
                 return False
             time.sleep(0.01)
         return True
 
 
 def main():
-    rclpy.init()
+    # ROS stays up after Ctrl-C, so the action being carried out can still be aborted.
+    rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
     node = ExecutorNode()
     executor = MultiThreadedExecutor()
     executor.add_node(node)
     try:
-        executor.spin()
+        while True:
+            executor.spin_once(timeout_sec=0.1)
     except KeyboardInterrupt:
-        pass
+        node.stopping = True
+    time.sleep(0.1)   # the running callbacks end first: shutdown does not wait for them
+    executor.shutdown()
     node.destroy_node()
     rclpy.try_shutdown()
