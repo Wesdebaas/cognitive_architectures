@@ -16,5 +16,6 @@ setup(
                                       f'draw_moves = {package_name}.draw_moves:main',
                                       f'steps = {package_name}.steps:main',
                                       f'replay = {package_name}.replay:main',
-                                      f'score = {package_name}.score:main']},
+                                      f'score = {package_name}.score:main',
+                                      f'evaluate = {package_name}.evaluate:main']},
 )

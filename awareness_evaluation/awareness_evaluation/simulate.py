@@ -3,7 +3,8 @@ second at a time, on LocalKB. Writes events.jsonl, one JSON object per line: wha
 night, end) and every message the AM wrote to its KB (decision, observation, beliefs, assertion, announcement); round
 robin writes its own decisions.
 
-ros2 run awareness_evaluation simulate <scenario's day folder> <events file> [am | round_robin]
+ros2 run awareness_evaluation simulate <scenario's day folder> <events file> [policy]
+policy: awareness_manager (the default), round_robin_item_places or round_robin_all_places
 """
 
 import json
@@ -19,7 +20,8 @@ from rosidl_runtime_py.convert import message_to_ordereddict
 from .draw_moves import AM, query
 from .round_robin import RoundRobin
 
-POLICIES = ['am', 'round_robin']
+# The AM, and round robin over the places an item can be or over every place.
+POLICIES = ['awareness_manager', 'round_robin_item_places', 'round_robin_all_places']
 
 
 class RecordingKB(LocalKB):
@@ -37,7 +39,7 @@ class RecordingKB(LocalKB):
         self.record(type(msg).__name__.lower(), self.t, **fields)
 
 
-def run(folder, events, policy='am'):
+def run(folder, events, policy='awareness_manager'):
     folder = Path(folder)
     with open(folder.parent / 'robot.yaml') as f:
         robot = yaml.safe_load(f)['/**']['ros__parameters']
@@ -61,7 +63,8 @@ def run(folder, events, policy='am'):
     am.start()
     for name in run['knowledge']:
         am.assert_knowledge((folder.parent / name).read_text(), 0)
-    chooser = am if policy == 'am' else RoundRobin(am, record)
+    chooser = am if policy == 'awareness_manager' else RoundRobin(am, record,
+                                                                    every_place=policy == 'round_robin_all_places')
     if run.get('announce', True):
         for arrival, goal in arrivals:
             am.announce(goal, arrival)
@@ -100,7 +103,7 @@ def run(folder, events, policy='am'):
 
 
 def main():
-    policy = sys.argv[3] if len(sys.argv) > 3 else 'am'
+    policy = sys.argv[3] if len(sys.argv) > 3 else 'awareness_manager'
     if policy not in POLICIES:
         sys.exit(f'policy must be one of {POLICIES}')
     with open(sys.argv[2], 'w') as events:

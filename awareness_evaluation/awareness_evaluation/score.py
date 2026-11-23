@@ -30,20 +30,29 @@ def seconds(run, needed_only):
     return totals
 
 
+def result(events):
+    """{goal: share correct, ..., 'correct' / 'wrong' / 'unknown': the day's shares, 'all items': share correct}, in
+    percent, of the needed items while a goal is active and of all items over the whole run."""
+    run = steps(events)
+    needed = seconds(run, needed_only=True)
+    day = {which: sum(counts[which] for counts in needed.values()) for which in STATES}
+    share = {goal: percent(counts) for goal, counts in needed.items()}
+    share.update({which: percent(day, which) for which in STATES})
+    share['all items'] = percent(seconds(run, needed_only=False)['day'])
+    return share
+
+
 def percent(counts, which='correct'):
-    return f'{100 * counts[which] / sum(counts.values()):.1f}%'
+    return 100 * counts[which] / sum(counts.values())
 
 
 def main():
     rows = []
     for file in sys.argv[1:]:
         events = read(file)
-        run = steps(events)
-        needed = seconds(run, needed_only=True)
-        day = {which: sum(counts[which] for counts in needed.values()) for which in STATES}
-        rows.append([events[0]['policy']] + [percent(counts) for counts in needed.values()]
-                    + [percent(day, which) for which in STATES] + [percent(seconds(run, needed_only=False)['day'])])
+        rows.append((events[0]['policy'], result(events)))
     print('needed items: per goal, then the day correct / wrong / unknown; all items: the day correct')
-    header = ['policy'] + list(needed) + STATES + ['all items']
-    for cells in [header] + rows:
-        print(''.join(f'{cell:>12s}' for cell in cells))
+    columns = list(rows[0][1])
+    print(f'{"policy":>25s}' + ''.join(f'{cell:>12s}' for cell in columns))
+    for policy, share in rows:
+        print(f'{policy:>25s}' + ''.join(f'{share[column]:11.1f}%' for column in columns))

@@ -1,6 +1,6 @@
 @prefix am: <http://example.org/awareness-manager#> .
 
-# Where every item really is at t = 0; world_events.csv changes it. Drawn by draw_moves, seed 1.
+# Where every item really is at t = 0; world_events.csv changes it. Drawn by draw_moves, seed 1, placement uniform.
 am:bowl_1 am:isAt am:dishwasher_1 .
 am:bread_1 am:isAt am:refrigerator_1 .
 am:cup_1 am:isAt am:sink_1 .

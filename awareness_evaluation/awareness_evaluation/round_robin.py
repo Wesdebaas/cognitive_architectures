@@ -4,11 +4,11 @@ relevance; distance only breaks ties."""
 
 class RoundRobin:
 
-    def __init__(self, am, record):
-        """am: the AM after its knowledge is asserted; only its places and its cost are used. Chosen: only the places the
-        AM has a belief about, the places an item can be."""
+    def __init__(self, am, record, every_place=False):
+        """am: the AM after its knowledge is asserted; only its places and its cost are used. every_place: all places;
+        otherwise only those the AM has a belief about, the places an item can be."""
         linked = {target for _, target, _ in am.relevance.a}
-        self.actions = [action for action in am.knowledge.actions if action[1] in linked]
+        self.actions = [action for action in am.knowledge.actions if every_place or action[1] in linked]
         self.cost = am.decision.cost
         self.record = record
         self.looked = {}   # action -> t of its last look
