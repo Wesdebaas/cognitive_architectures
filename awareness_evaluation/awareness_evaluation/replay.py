@@ -102,6 +102,7 @@ def main():
     # Transient local: RViz gets the current picture even if it starts later.
     publisher = node.create_publisher(MarkerArray, TOPIC, QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
     signal.signal(signal.SIGINT, signal.SIG_DFL)   # Ctrl-C in the terminal closes the window
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)  # so do kill and timeout
 
     app = QApplication(sys.argv[:1])
     window = QWidget()

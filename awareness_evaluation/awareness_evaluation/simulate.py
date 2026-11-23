@@ -1,8 +1,9 @@
-"""The awareness manager run through a scenario without ROS nodes: one program, one second at a time, on LocalKB.
-Writes events.jsonl, one JSON object per line: what the world did (start, goal, move, look, night, end) and every
-message the AM wrote to its KB (decision, observation, beliefs, assertion, announcement).
+"""The awareness manager, or the round robin baseline, run through a scenario without ROS nodes: one program, one
+second at a time, on LocalKB. Writes events.jsonl, one JSON object per line: what the world did (start, goal, move, look,
+night, end) and every message the AM wrote to its KB (decision, observation, beliefs, assertion, announcement); round
+robin writes its own decisions.
 
-ros2 run awareness_evaluation simulate <scenario's day folder> <events file>
+ros2 run awareness_evaluation simulate <scenario's day folder> <events file> [am | round_robin]
 """
 
 import json
@@ -16,6 +17,9 @@ from awareness_scenario.timeline import ASSERTION, GOAL, NIGHT, World, settings,
 from rosidl_runtime_py.convert import message_to_ordereddict
 
 from .draw_moves import AM, query
+from .round_robin import RoundRobin
+
+POLICIES = ['am', 'round_robin']
 
 
 class RecordingKB(LocalKB):
@@ -33,7 +37,7 @@ class RecordingKB(LocalKB):
         self.record(type(msg).__name__.lower(), self.t, **fields)
 
 
-def run(folder, events):
+def run(folder, events, policy='am'):
     folder = Path(folder)
     with open(folder.parent / 'robot.yaml') as f:
         robot = yaml.safe_load(f)['/**']['ros__parameters']
@@ -53,10 +57,11 @@ def run(folder, events):
     position, action, started, ends = robot['start_position'], None, None, None
 
     record('start', 0, position=position, locations=dict(sorted(world.where.items())),
-           threshold=am.decision.parameters['idle_threshold'])
+           threshold=am.decision.parameters['idle_threshold'], policy=policy)
     am.start()
     for name in run['knowledge']:
         am.assert_knowledge((folder.parent / name).read_text(), 0)
+    chooser = am if policy == 'am' else RoundRobin(am, record)
     if run.get('announce', True):
         for arrival, goal in arrivals:
             am.announce(goal, arrival)
@@ -83,11 +88,11 @@ def run(folder, events):
         if action is not None and t >= ends:
             seen = world.inspect(action[1])
             record('look', t, started=started, action=action[0], target=action[1], seen=seen)
-            am.observe(action, {item: True for item in seen}, t)
+            chooser.observe(action, {item: True for item in seen}, t)
             position, action = action[1], None
 
         if action is None:
-            action = am.decide(t, position)
+            action = chooser.decide(t, position)
             if action is not None:
                 started, ends = t, t + am.decision.cost(action, position)
 
@@ -95,5 +100,8 @@ def run(folder, events):
 
 
 def main():
+    policy = sys.argv[3] if len(sys.argv) > 3 else 'am'
+    if policy not in POLICIES:
+        sys.exit(f'policy must be one of {POLICIES}')
     with open(sys.argv[2], 'w') as events:
-        run(sys.argv[1], events)
+        run(sys.argv[1], events, policy)
