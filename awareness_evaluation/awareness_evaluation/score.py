@@ -1,10 +1,13 @@
 """The result of a run: the share of item-seconds in which the robot's looks say where an item really is.
 
-ros2 run awareness_evaluation score <events file> ...
+ros2 run awareness_evaluation score <condition, folder or events file> ...
+A condition (e.g. votes_960_2) or folder scores every policy's run in it.
 """
 
 import sys
 
+from .paths import condition
+from .simulate import POLICIES
 from .steps import read, steps
 
 STATES = ['correct', 'wrong', 'unknown']
@@ -46,13 +49,29 @@ def percent(counts, which='correct'):
     return 100 * counts[which] / sum(counts.values())
 
 
-def main():
+def table(files):
     rows = []
-    for file in sys.argv[1:]:
+    for file in files:
         events = read(file)
         rows.append((events[0]['policy'], result(events)))
-    print('needed items: per goal, then the day correct / wrong / unknown; all items: the day correct')
     columns = list(rows[0][1])
     print(f'{"policy":>25s}' + ''.join(f'{cell:>12s}' for cell in columns))
     for policy, share in rows:
         print(f'{policy:>25s}' + ''.join(f'{share[column]:11.1f}%' for column in columns))
+
+
+def main():
+    """One table per condition or folder; events files next to each other share one."""
+    tables = []
+    for name in sys.argv[1:]:
+        path = condition(name)
+        if path.is_dir():
+            tables.append((path.name, [path / f'{policy}.events.jsonl' for policy in POLICIES]))
+        elif tables and tables[-1][0] is None:
+            tables[-1][1].append(path)
+        else:
+            tables.append((None, [path]))
+    print('needed items: per goal, then the day correct / wrong / unknown; all items: the day correct')
+    for title, files in tables:
+        print(f'\n{title}' if title else '')
+        table(files)

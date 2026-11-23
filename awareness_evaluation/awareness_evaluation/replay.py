@@ -1,21 +1,26 @@
 """Step through a finished run: a window with the time, goal, what happened, the items, why the robot chose its place
 and how that place's P is made; RViz shows each step's picture.
 
+ros2 run awareness_evaluation replay <condition or folder> [policy]
 ros2 run awareness_evaluation replay <events file> <places.csv>
-rviz2 -d awareness_evaluation/view.rviz
+A condition is a folder of the evaluation, e.g. votes_960_2; the policy defaults to awareness_manager. Starts RViz too.
 """
 
 import signal
+import subprocess
 import sys
+from pathlib import Path
 
 import rclpy
-from python_qt_binding.QtCore import Qt
+from python_qt_binding.QtCore import Qt, QTimer
 from python_qt_binding.QtWidgets import (QApplication, QHBoxLayout, QHeaderView, QLabel, QPushButton, QSlider, QTableWidget,
                                          QTableWidgetItem, QVBoxLayout, QWidget)
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from visualization_msgs.msg import MarkerArray
 
+from .paths import VIEW, condition
 from .picture import TOPIC, picture, read_places
+from .simulate import POLICIES
 from .steps import read, steps
 
 ITEM_COLUMNS = ['Item', 'Needed', 'Really at', 'Looks say', 'Last seen', '']
@@ -94,19 +99,35 @@ def fill(widget, rows):
             widget.setItem(row, column, QTableWidgetItem(cell))
 
 
+def files(args):
+    """(events file, places.csv) from the command line."""
+    if len(args) == 2 and Path(args[0]).is_file():
+        return Path(args[0]), Path(args[1])
+    folder = condition(args[0])
+    policy = args[1] if len(args) > 1 else POLICIES[0]
+    return folder / f'{policy}.events.jsonl', folder / 'places.csv'
+
+
 def main():
-    events = read(sys.argv[1])
-    run, places, threshold = steps(events), read_places(sys.argv[2]), events[0]['threshold']
+    events_file, places_file = files(sys.argv[1:])
+    events = read(events_file)
+    run, places, threshold = steps(events), read_places(places_file), events[0]['threshold']
+    rviz = subprocess.Popen(['rviz2', '-d', str(VIEW)])
     rclpy.init()
     node = rclpy.create_node('replay')
     # Transient local: RViz gets the current picture even if it starts later.
     publisher = node.create_publisher(MarkerArray, TOPIC, QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
-    signal.signal(signal.SIGINT, signal.SIG_DFL)   # Ctrl-C in the terminal closes the window
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)  # so do kill and timeout
 
     app = QApplication(sys.argv[:1])
+    # Ctrl-C, kill and timeout close the window, and so RViz. Python handles a signal only when it runs, so a timer
+    # lets it run every 0.2 s.
+    for number in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(number, lambda *_: app.quit())
+    timer = QTimer()
+    timer.timeout.connect(lambda: None)
+    timer.start(200)
     window = QWidget()
-    window.setWindowTitle('replay')
+    window.setWindowTitle(f"replay: {events_file.parent.name}, {events[0]['policy']}")
     header, happened, decided, explained = QLabel(), QLabel(), QLabel(), QLabel()
     items, ranking, beliefs = table(ITEM_COLUMNS), table(RANKING_COLUMNS), table(BELIEF_COLUMNS)
     slider = QSlider(Qt.Horizontal)
@@ -156,5 +177,7 @@ def main():
     window.resize(1200, 800)
     window.show()
     app.exec_()
+    rviz.terminate()
+    rviz.wait()
     node.destroy_node()
     rclpy.try_shutdown()

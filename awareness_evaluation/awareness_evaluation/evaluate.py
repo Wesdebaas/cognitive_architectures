@@ -1,7 +1,8 @@
 """Every condition of the evaluation: per placement, persistence and seed, a copy of the scenario with its own world,
 run by every policy and scored. Prints the means per condition and writes every run's score to results.csv.
 
-ros2 run awareness_evaluation evaluate <scenario folder> <output folder>
+ros2 run awareness_evaluation evaluate [scenario folder] [output folder]
+Defaults: awareness_evaluation/kitchen_30 and awareness_evaluation/runs/evaluation.
 """
 
 import csv
@@ -14,6 +15,7 @@ from pathlib import Path
 import yaml
 
 from .draw_moves import PLACEMENTS, write_world
+from .paths import RUNS, SCENARIO
 from .score import result
 from .simulate import POLICIES, run
 from .steps import read
@@ -54,7 +56,8 @@ def condition(job):
 
 
 def main():
-    scenario, out = Path(sys.argv[1]), Path(sys.argv[2])
+    scenario = Path(sys.argv[1]) if len(sys.argv) > 1 else SCENARIO
+    out = Path(sys.argv[2]) if len(sys.argv) > 2 else RUNS
     out.mkdir(parents=True, exist_ok=True)
     jobs = [(scenario, out, placement, persistence, seed)
             for placement in PLACEMENTS for persistence in PERSISTENCES for seed in SEEDS]
