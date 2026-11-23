@@ -15,9 +15,9 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def stop_gazebo(context):
-    """Gazebo's simulator outlives a launch that shuts itself down, so stop it explicitly. A launch starts no new
-    process while shutting down, so this runs inside it."""
-    subprocess.run(['pkill', '-f', 'gz sim -r .*small_house.world'])
+    """Gazebo's server and window have their own process groups, so Ctrl-C does not reach them: kill the Gazebo started
+    from this terminal (-s 0, its session). Does not wait for pkill: the launch could not see its other processes end."""
+    subprocess.Popen(['pkill', '-KILL', '-s', '0', '-f', '^(ruby .*/)?gz sim'])
     return []
 
 
