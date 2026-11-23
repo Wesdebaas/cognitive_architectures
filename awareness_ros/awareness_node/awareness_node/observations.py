@@ -27,7 +27,11 @@ class Observations:
         self.kb.write(Observation(number=self.observations, action=action_type, target=target, claim=claim,
                                   t=float(t), complete=complete, reported=reports),
                       stored(f'observation_{self.observations}'))
-        self.forget(target=target, items={item for item, reported in values.items() if reported is True})
+        items = {item for item, reported in values.items() if reported is True}
+        if complete:
+            known = {short(row['item']) for row in self.kb.query(f'SELECT ?item WHERE {{ ?item a <{AM}Item> }}')}
+            items |= {item for item in known if self.missed(item) == (target, float(t))}
+        self.forget(target=target, items=items)
         return found
 
     def assert_knowledge(self, turtle, t):
@@ -61,17 +65,38 @@ class Observations:
         self.observed = {belief: seen for belief, seen in self.observed.items()
                          if belief[1] != target and belief[0] not in items}
 
+    def missed(self, item):
+        """(target, t) of the first complete look that did not see the item where it was last seen; None if none."""
+        claim = self.knowledge.claim
+        query = f'''SELECT ?target ?t WHERE {{ GRAPH <{OBSERVATIONS.value}> {{
+            ?observation a <{AM}Observation> ; <{AM}target> ?target ; <{AM}claim> "{claim}" ; <{AM}t> ?t ; <{AM}reported> ?report .
+            ?report <{AM}item> <{AM}{item}> ; <{AM}value> true }} }} ORDER BY DESC(?t) LIMIT 1'''
+        for row in self.kb.query(query):
+            query = f'''SELECT ?t WHERE {{ GRAPH <{OBSERVATIONS.value}> {{
+                ?observation a <{AM}Observation> ; <{AM}target> <{row['target'].value}> ; <{AM}claim> "{claim}" ; <{AM}t> ?t ;
+                      <{AM}complete> true
+                FILTER(?t > {value(row['t'])})
+                FILTER NOT EXISTS {{ ?observation <{AM}reported> ?report . ?report <{AM}item> <{AM}{item}> ; <{AM}value> true }}
+                }} }} ORDER BY ?t LIMIT 1'''
+            for miss in self.kb.query(query):
+                return short(row['target']), value(miss['t'])
+        return None
+
     def read_last_observation(self, belief):
         """An item a complete action did not report has the claim false. For an am:OnePlaceClaim, a sighting elsewhere
-        also makes it false here. An absence stops counting once an assertion introduces the item again."""
+        also makes it false here, and once the item is missed where it was last seen, it has moved: what was observed
+        elsewhere before the miss no longer counts. An absence stops counting once an assertion introduces the item
+        again."""
         item, target, claim = belief
+        miss = self.missed(item) if self.knowledge.one_place else None
+        after = f'FILTER(?t > {miss[1]})' if miss is not None and miss[0] != target else ''
         not_asserted_since = f'''NOT EXISTS {{
             ?assertion a <{AM}Assertion> ; <{AM}introduced> <{AM}{item}> ; <{AM}t> ?asserted FILTER(?asserted > ?t) }}'''
         query = f'''SELECT ?t ?complete ?value WHERE {{ GRAPH <{OBSERVATIONS.value}> {{
             ?observation a <{AM}Observation> ; <{AM}target> <{AM}{target}> ; <{AM}claim> "{claim}" ; <{AM}t> ?t ;
                   <{AM}complete> ?complete .
             OPTIONAL {{ ?observation <{AM}reported> ?report . ?report <{AM}item> <{AM}{item}> ; <{AM}value> ?value }}
-            FILTER(BOUND(?value) || (?complete && {not_asserted_since})) }} }}
+            FILTER(BOUND(?value) || (?complete && {not_asserted_since})) {after} }} }}
             ORDER BY DESC(?t) LIMIT 1'''
         here = None
         for row in self.kb.query(query):
@@ -80,7 +105,7 @@ class Observations:
             query = f'''SELECT ?t WHERE {{ GRAPH <{OBSERVATIONS.value}> {{
                 ?observation a <{AM}Observation> ; <{AM}target> ?other ; <{AM}claim> "{claim}" ; <{AM}t> ?t ; <{AM}reported> ?report .
                 ?report <{AM}item> <{AM}{item}> ; <{AM}value> true
-                FILTER(?other != <{AM}{target}> && {not_asserted_since}) }} }}
+                FILTER(?other != <{AM}{target}> && {not_asserted_since}) {after} }} }}
                 ORDER BY DESC(?t) LIMIT 1'''
             for row in self.kb.query(query):
                 if here is None or value(row['t']) > here[0]:
